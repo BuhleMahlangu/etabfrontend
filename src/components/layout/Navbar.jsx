@@ -19,15 +19,19 @@ export function Navbar() {
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          <Link to="/" className="flex items-center gap-2">
-            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white font-bold">
-              E
-            </div>
+          {/* Logo with Image */}
+          <Link to="/" className="flex items-center gap-3">
+            <img 
+              src="/E-tab logo.png" 
+              alt="E-tab Logo" 
+              className="h-10 w-auto"
+            />
             <span className="text-xl font-bold text-slate-900">E-tab</span>
           </Link>
 
+          {/* Desktop Navigation */}
           <div className="hidden md:flex items-center gap-1">
-            {navLinks.map((link) => (
+            {user && navLinks.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
@@ -43,21 +47,29 @@ export function Navbar() {
             ))}
           </div>
 
+          {/* Right Side */}
           <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-3">
                 <Badge variant={user.role === 'admin' ? 'primary' : 'success'}>
                   {user.role}
                 </Badge>
-                <span className="text-sm font-medium text-slate-700">{user.firstName}</span>
+                <span className="text-sm font-medium text-slate-700 hidden sm:block">
+                  {user.firstName}
+                </span>
                 <Button variant="ghost" size="sm" onClick={logout}>
                   Logout
                 </Button>
               </div>
             ) : (
-              <Button as={Link} to="/login" size="sm">
-                Sign In
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button as={Link} to="/login" variant="ghost" size="sm">
+                  Sign In
+                </Button>
+                <Button as={Link} to="/register" size="sm">
+                  Sign Up
+                </Button>
+              </div>
             )}
           </div>
         </div>
