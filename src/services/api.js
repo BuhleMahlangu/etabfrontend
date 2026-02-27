@@ -30,6 +30,12 @@ export const authAPI = {
   logout: () => api.post('/auth/logout'),
 };
 
+export const subjectAPI = {
+  getMySubjects: () => api.get('/subjects/my-subjects'),
+  getById: (id) => api.get(`/subjects/${id}`),
+  getMaterials: (subjectId) => api.get(`/subjects/${subjectId}/materials`),
+};
+
 export const materialAPI = {
   getAll: () => api.get('/materials'),
   getById: (id) => api.get(`/materials/${id}`),
@@ -37,6 +43,22 @@ export const materialAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   delete: (id) => api.delete(`/materials/${id}`),
+};
+
+export const deadlineAPI = {
+  getMyDeadlines: () => api.get('/deadlines/my-deadlines'),
+  getBySubject: (subjectId) => api.get(`/deadlines/subject/${subjectId}`),
+};
+
+export const notificationAPI = {
+  getMyNotifications: () => api.get('/notifications/my-notifications'),
+  markAsRead: (id) => api.put(`/notifications/${id}/read`),
+  markAllAsRead: () => api.put('/notifications/read-all'),
+};
+
+export const enrollmentAPI = {
+  getMyReport: () => api.get('/enrollments/my-report'),
+  updateMarks: (enrollmentId, marks) => api.put(`/enrollments/${enrollmentId}/marks`, marks),
 };
 
 export default api;
