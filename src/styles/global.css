@@ -1,0 +1,120 @@
+/* E-tab Global Styles */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--etab-font-sans);
+  background-color: var(--etab-bg-secondary);
+  color: var(--etab-text-primary);
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--etab-slate-100);
+  border-radius: var(--etab-radius-full);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--etab-slate-300);
+  border-radius: var(--etab-radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--etab-slate-400);
+}
+
+/* Selection */
+::selection {
+  background-color: var(--etab-primary-100);
+  color: var(--etab-primary-700);
+}
+
+/* Focus Styles */
+*:focus-visible {
+  outline: 2px solid var(--etab-primary-500);
+  outline-offset: 2px;
+}
+
+/* Utility Classes */
+.etab-container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 var(--etab-space-6);
+}
+
+.etab-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Animations */
+@keyframes etab-fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes etab-slide-up {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes etab-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.etab-animate-fade-in {
+  animation: etab-fade-in var(--etab-transition-base);
+}
+
+.etab-animate-slide-up {
+  animation: etab-slide-up var(--etab-transition-slow);
+}
+
+/* Glass Effect */
+.etab-glass {
+  background: rgba(255, 255, 255, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+/* Gradient Backgrounds */
+.etab-gradient-primary {
+  background: linear-gradient(135deg, var(--etab-primary-600) 0%, var(--etab-primary-700) 100%);
+}
+
+.etab-gradient-subtle {
+  background: linear-gradient(180deg, var(--etab-slate-50) 0%, var(--etab-bg-secondary) 100%);
+}
