@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { authAPI } from '../services/api';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
-import { Badge } from '../components/common/Badge';
+import { useToast } from '../components/common/Toast';
+
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
 const GRADES = [
   'Grade 1', 'Grade 2', 'Grade 3',
@@ -31,37 +32,49 @@ export function Register() {
     grade: '',
     selectedSubjects: []
   });
+  const [gradeDetails, setGradeDetails] = useState(null);
   const [availableSubjects, setAvailableSubjects] = useState([]);
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch subjects when grade changes (for learners) or for teachers
+  // Fetch subjects when teacher role selected
   useEffect(() => {
-    if (formData.role === 'learner' && formData.grade) {
-      fetchSubjectsForGrade(formData.grade);
-    } else if (formData.role === 'teacher') {
+    if (formData.role === 'teacher') {
       fetchAllSubjects();
     }
-  }, [formData.role, formData.grade]);
+  }, [formData.role]);
 
-  const fetchSubjectsForGrade = async (grade) => {
+  // Fetch grade details when grade selected
+  useEffect(() => {
+    if (formData.role === 'learner' && formData.grade) {
+      fetchGradeDetails(formData.grade);
+    }
+  }, [formData.grade, formData.role]);
+
+  const fetchAllSubjects = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/subjects/grade/${grade}`);
+      const response = await fetch(`${API_URL}/subjects/available-grades`);
       const data = await response.json();
-      setAvailableSubjects(data.data || []);
+      // For teachers, we'd need a different endpoint - this is simplified
+      console.log('Available grades:', data);
     } catch (err) {
       console.error('Failed to fetch subjects:', err);
     }
   };
 
-  const fetchAllSubjects = async () => {
+  const fetchGradeDetails = async (grade) => {
     try {
-      const response = await fetch('http://localhost:5000/api/subjects');
+      const response = await fetch(`${API_URL}/subjects/available-grades`);
       const data = await response.json();
-      setAvailableSubjects(data.data || []);
+      
+      if (data.success) {
+        const gradeInfo = data.grades.find(g => g.grade === grade);
+        setGradeDetails(gradeInfo);
+      }
     } catch (err) {
-      console.error('Failed to fetch subjects:', err);
+      console.error('Failed to fetch grade details:', err);
     }
   };
 
@@ -77,20 +90,87 @@ export function Register() {
     }
 
     try {
-      const payload = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        role: formData.role,
-        grade: formData.role === 'learner' ? formData.grade : null,
-        subjects: formData.role === 'teacher' ? formData.selectedSubjects : null
-      };
+      // Step 1: Register the user
+      const registerResponse = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          email: formData.email,
+          password: formData.password,
+          role: formData.role,
+          grade: formData.role === 'learner' ? formData.grade : null
+        })
+      });
 
-      await authAPI.register(payload);
-      setStep(3); // Success
+      const registerData = await registerResponse.json();
+
+      if (!registerResponse.ok) {
+        throw new Error(registerData.message || 'Registration failed');
+      }
+
+      // CRITICAL: Check if token exists
+      if (!registerData.token) {
+        console.error('Registration response missing token:', registerData);
+        throw new Error('Registration successful but no token received. Please login manually.');
+      }
+
+      const token = registerData.token;
+
+      // FIXED: Store token in localStorage so AuthContext can find it
+      localStorage.setItem('token', token);
+
+      // Step 2: For learners, select grade (this will auto-enroll in subjects)
+      if (formData.role === 'learner' && formData.grade) {
+        const selectGradeResponse = await fetch(`${API_URL}/subjects/select-grade`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ grade: formData.grade })
+        });
+
+        const gradeData = await selectGradeResponse.json();
+        
+        if (!selectGradeResponse.ok) {
+          console.warn('Grade selection warning:', gradeData);
+          addToast('Account created, but there was an issue setting up your subjects.', 'warning');
+        } else {
+          addToast(`Welcome! You are now enrolled in ${gradeData.autoEnrolled} subjects for ${formData.grade}.`, 'success');
+        }
+      }
+
+      // Step 3: For teachers, create teacher profile
+      if (formData.role === 'teacher') {
+        try {
+          await fetch(`${API_URL}/teachers/register`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              employeeNumber: `TCH${Date.now()}`,
+              qualification: 'To be updated',
+              specialization: 'To be updated',
+              yearsOfExperience: 0,
+              bio: 'New teacher'
+            })
+          });
+          addToast('Teacher account created successfully!', 'success');
+        } catch (teacherErr) {
+          console.error('Teacher profile creation failed:', teacherErr);
+          // Don't fail registration if teacher profile creation fails
+        }
+      }
+
+      setStep(3);
+      
     } catch (err) {
       setError(err.message || 'Registration failed');
+      addToast(err.message || 'Registration failed', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -150,18 +230,17 @@ export function Register() {
 
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-2">I am a</label>
-                <div className="grid grid-cols-3 gap-3">
-                  {['learner', 'teacher', 'admin'].map((role) => (
+                <div className="grid grid-cols-2 gap-3">
+                  {['learner', 'teacher'].map((role) => (
                     <button
                       key={role}
                       type="button"
                       onClick={() => setFormData({ ...formData, role, grade: '', selectedSubjects: [] })}
-                      className={cn(
-                        'px-4 py-2 rounded-lg text-sm font-medium border transition-all capitalize',
+                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all capitalize ${
                         formData.role === role
                           ? 'bg-blue-50 border-blue-500 text-blue-700'
                           : 'bg-white border-slate-200 text-slate-600'
-                      )}
+                      }`}
                     >
                       {role}
                     </button>
@@ -186,6 +265,9 @@ export function Register() {
 
   // Step 2: Role-specific details
   if (step === 2) {
+    const gradeNum = parseInt(formData.grade?.replace('Grade ', '') || 0);
+    const isFET = gradeNum >= 10;
+
     return (
       <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
         <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
@@ -197,7 +279,7 @@ export function Register() {
           </button>
 
           <h2 className="text-2xl font-bold text-slate-900 mb-6">
-            {formData.role === 'learner' ? 'Select Your Grade' : 'Select Your Subjects'}
+            {formData.role === 'learner' ? 'Select Your Grade' : 'Teacher Registration'}
           </h2>
 
           {formData.role === 'learner' && (
@@ -205,7 +287,7 @@ export function Register() {
               <label className="block text-sm font-medium text-slate-700 mb-2">Current Grade</label>
               <select
                 value={formData.grade}
-                onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
+                onChange={(e) => setFormData({ ...formData, grade: e.target.value, selectedSubjects: [] })}
                 className="w-full rounded-xl border border-slate-200 px-4 py-2.5"
               >
                 <option value="">Select grade...</option>
@@ -216,11 +298,31 @@ export function Register() {
                 ))}
               </select>
 
-              {formData.grade && (
+              {gradeDetails && (
                 <div className="mt-4 p-4 bg-blue-50 rounded-lg">
                   <p className="text-sm text-blue-700">
                     <strong>Phase:</strong> {PHASES[formData.grade]}<br />
-                    <strong>Subjects:</strong> You will be automatically enrolled in all compulsory subjects for {formData.grade}.
+                    <strong>Total Subjects:</strong> {gradeDetails.total_modules}<br />
+                    <strong>Compulsory:</strong> {gradeDetails.compulsory_count} subjects<br />
+                    {isFET && (
+                      <>
+                        <strong>Optional:</strong> {gradeDetails.optional_count} subjects (choose up to 4)<br />
+                      </>
+                    )}
+                    <span className="text-xs text-blue-600 mt-1 block">
+                      {isFET 
+                        ? 'You will be auto-enrolled in compulsory subjects and can select optional subjects after registration.'
+                        : 'You will be automatically enrolled in all subjects for this grade.'}
+                    </span>
+                  </p>
+                </div>
+              )}
+
+              {isFET && gradeDetails && (
+                <div className="mt-4 p-4 border border-amber-200 bg-amber-50 rounded-lg">
+                  <p className="text-sm text-amber-700">
+                    <strong>Note:</strong> For FET phase (Grades 10-12), you'll select your 3-4 optional subjects after logging in. 
+                    Compulsory subjects (Life Orientation, Home Language, First Additional Language) are automatically assigned.
                   </p>
                 </div>
               )}
@@ -229,31 +331,12 @@ export function Register() {
 
           {formData.role === 'teacher' && (
             <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Select Subjects You Teach
-              </label>
-              <div className="max-h-64 overflow-y-auto border border-slate-200 rounded-xl p-4 space-y-2">
-                {availableSubjects.map((subject) => (
-                  <label 
-                    key={subject.id} 
-                    className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.selectedSubjects.includes(subject.id)}
-                      onChange={() => toggleSubject(subject.id)}
-                      className="rounded border-slate-300 text-blue-600"
-                    />
-                    <div className="flex-1">
-                      <p className="font-medium text-slate-900">{subject.name}</p>
-                      <p className="text-sm text-slate-500">{subject.phase} • {subject.code}</p>
-                    </div>
-                  </label>
-                ))}
+              <div className="p-4 bg-amber-50 rounded-lg mb-4">
+                <p className="text-sm text-amber-700">
+                  <strong>Note:</strong> As a teacher, you'll be able to upload materials, 
+                  create assignments, and grade student work. Your subjects will be assigned by an administrator.
+                </p>
               </div>
-              <p className="text-sm text-slate-500 mt-2">
-                Selected: {formData.selectedSubjects.length} subjects
-              </p>
             </div>
           )}
 
@@ -284,7 +367,7 @@ export function Register() {
             onClick={handleSubmit} 
             className="w-full mt-6" 
             isLoading={isLoading}
-            disabled={formData.role === 'learner' ? !formData.grade : formData.selectedSubjects.length === 0}
+            disabled={formData.role === 'learner' ? !formData.grade : false}
           >
             Create Account
           </Button>
@@ -305,15 +388,16 @@ export function Register() {
         <h2 className="text-2xl font-bold text-slate-900 mb-2">Account Created!</h2>
         <p className="text-slate-500 mb-6">
           {formData.role === 'learner' 
-            ? `You have been enrolled in all subjects for ${formData.grade}.`
-            : 'Your teacher account is pending approval.'}
+            ? `Welcome to E-tab! You are now enrolled in ${gradeDetails?.compulsory_count || 'all'} compulsory subjects for ${formData.grade}.`
+            : 'Your teacher account has been created. You can now upload materials and create assignments.'}
         </p>
-        <Button as={Link} to="/login">Sign In</Button>
+        {formData.role === 'learner' && parseInt(formData.grade?.replace('Grade ', '')) >= 10 && (
+          <p className="text-sm text-amber-600 mb-4">
+            Don't forget to select your optional subjects after logging in!
+          </p>
+        )}
+        <Button onClick={() => navigate('/login')}>Sign In</Button>
       </div>
     </div>
   );
-}
-
-function cn(...classes) {
-  return classes.filter(Boolean).join(' ');
 }

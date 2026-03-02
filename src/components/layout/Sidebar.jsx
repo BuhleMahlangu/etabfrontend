@@ -9,21 +9,75 @@ import {
   FileText, 
   TrendingUp, 
   Settings,
-  LogOut
+  LogOut,
+  GraduationCap,
+  Users,
+  Upload
 } from 'lucide-react';
 
 export function Sidebar() {
   const { user, logout } = useAuth();
 
-  const menuItems = [
-    { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/my-subjects', icon: BookOpen, label: 'My Subjects' },
-    { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
-    { to: '/notifications', icon: Bell, label: 'Notifications' },
-    { to: '/materials', icon: FileText, label: 'All Materials' },
-    { to: '/progress', icon: TrendingUp, label: 'My Progress' },
-    { to: '/settings', icon: Settings, label: 'Settings' },
-  ];
+  // Define menu items based on user role
+  const getMenuItems = () => {
+    const role = user?.role;
+
+    // Learner menu
+    if (role === 'learner') {
+      return [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/subjects', icon: BookOpen, label: 'My Subjects' },
+        { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
+        { to: '/notifications', icon: Bell, label: 'Notifications' },
+        { to: '/materials', icon: FileText, label: 'All Materials' },
+        { to: '/progress', icon: TrendingUp, label: 'My Progress' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ];
+    }
+
+    // Teacher menu
+    if (role === 'teacher') {
+      return [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/teacher/dashboard', icon: GraduationCap, label: 'Teacher Dashboard' },
+        { to: '/teacher/upload', icon: Upload, label: 'Upload Materials' },
+        { to: '/teacher/assignments', icon: FileText, label: 'Assignments' },
+        { to: '/teacher/students', icon: Users, label: 'My Students' },
+        { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
+        { to: '/notifications', icon: Bell, label: 'Notifications' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ];
+    }
+
+    // Admin menu
+    if (role === 'admin') {
+      return [
+        { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+        { to: '/admin', icon: Settings, label: 'Admin Panel' },
+        { to: '/admin/users', icon: Users, label: 'Manage Users' },
+        { to: '/admin/subjects', icon: BookOpen, label: 'Manage Subjects' },
+        { to: '/notifications', icon: Bell, label: 'Notifications' },
+        { to: '/settings', icon: Settings, label: 'Settings' },
+      ];
+    }
+
+    // Fallback (shouldn't happen, but just in case)
+    return [
+      { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
+      { to: '/settings', icon: Settings, label: 'Settings' },
+    ];
+  };
+
+  const menuItems = getMenuItems();
+
+  // Get role badge color
+  const getRoleBadgeColor = (role) => {
+    switch (role) {
+      case 'admin': return 'bg-purple-100 text-purple-700';
+      case 'teacher': return 'bg-green-100 text-green-700';
+      default: return 'bg-blue-100 text-blue-700';
+    }
+  };
 
   return (
     <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-slate-200 h-screen sticky top-0">
@@ -66,9 +120,16 @@ export function Sidebar() {
               {user?.firstName} {user?.lastName}
             </p>
             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
-            <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-blue-100 text-blue-700 mt-1">
-              {user?.grade}
-            </span>
+            <div className="flex items-center gap-1 mt-1">
+              <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleBadgeColor(user?.role)}`}>
+                {user?.role}
+              </span>
+              {user?.role === 'learner' && user?.grade && (
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600">
+                  {user.grade}
+                </span>
+              )}
+            </div>
           </div>
         </div>
         <button

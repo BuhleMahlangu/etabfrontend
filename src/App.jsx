@@ -10,9 +10,11 @@ import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
-import { Subjects } from './pages/Subjects';
+import { SubjectBrowser } from './components/SubjectBrowser';  // ← CHANGED: Import SubjectBrowser
 import { Materials } from './pages/Materials';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { TeacherDashboard } from './pages/TeacherDashboard';
+import { TeacherRegister } from './pages/TeacherRegister';
 
 // Role-based protected route
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -89,12 +91,13 @@ function App() {
               }
             />
             
+            {/* UPDATED: Subject Browser Route */}
             <Route
               path="/subjects"
               element={
                 <PrivateRoute>
                   <AuthenticatedLayout>
-                    <Subjects />
+                    <SubjectBrowser />  {/* ← CHANGED: Use SubjectBrowser instead of Subjects */}
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -117,6 +120,84 @@ function App() {
                 <PrivateRoute>
                   <AuthenticatedLayout>
                     <Materials />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Teacher Routes */}
+            <Route
+              path="/teacher/dashboard"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <TeacherDashboard />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/register"
+              element={
+                <PrivateRoute>
+                  <AuthenticatedLayout>
+                    <TeacherRegister />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/upload"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <Materials />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/materials"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <div>Teacher Materials Management (Coming Soon)</div>
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/assignments"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <div>Teacher Assignments (Coming Soon)</div>
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/grade"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <div>Grade Submissions (Coming Soon)</div>
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/students"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <div>My Students (Coming Soon)</div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -151,18 +232,6 @@ function App() {
                 <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
                     <AdminDashboard />
-                  </AuthenticatedLayout>
-                </PrivateRoute>
-              }
-            />
-            
-            {/* Teacher Routes */}
-            <Route
-              path="/teacher/upload"
-              element={
-                <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
-                    <Materials />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }

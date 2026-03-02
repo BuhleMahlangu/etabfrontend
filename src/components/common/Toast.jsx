@@ -5,11 +5,16 @@ import { cn } from '../../utils/cn';
 
 const ToastContext = React.createContext(null);
 
+// Generate unique ID
+const generateId = () => {
+  return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+};
+
 export const ToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
   const addToast = (message, type = 'info', duration = 5000) => {
-    const id = Date.now();
+    const id = generateId(); // Unique ID instead of Date.now()
     setToasts(prev => [...prev, { id, message, type, duration }]);
     
     setTimeout(() => {

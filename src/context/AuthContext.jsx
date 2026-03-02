@@ -8,11 +8,12 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('etab_token');
+    // FIXED: Use 'token' instead of 'etab_token'
+    const token = localStorage.getItem('token');
     if (token) {
       authAPI.getMe()
         .then((res) => setUser(res.data))
-        .catch(() => localStorage.removeItem('etab_token'))
+        .catch(() => localStorage.removeItem('token'))
         .finally(() => setLoading(false));
     } else {
       setLoading(false);
@@ -21,13 +22,13 @@ export function AuthProvider({ children }) {
 
   const login = async (credentials) => {
     const res = await authAPI.login(credentials);
-    localStorage.setItem('etab_token', res.token);
+    localStorage.setItem('token', res.token);  // FIXED: Use 'token'
     setUser(res.user);
     return res;
   };
 
   const logout = () => {
-    localStorage.removeItem('etab_token');
+    localStorage.removeItem('token');  // FIXED: Use 'token'
     setUser(null);
   };
 
