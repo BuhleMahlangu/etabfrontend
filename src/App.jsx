@@ -5,12 +5,13 @@ import { ToastProvider } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { Button } from './components/common/Button'; // ← ADDED: Import Button
 
 // Pages
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
-import { SubjectBrowser } from './components/SubjectBrowser';  // ← CHANGED: Import SubjectBrowser
+import { SubjectBrowser } from './components/SubjectBrowser';
 import { Materials } from './pages/Materials';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
@@ -54,6 +55,27 @@ function AuthenticatedLayout({ children }) {
   );
 }
 
+// Role-based dashboard redirect
+function DashboardRouter() {
+  const { user, loading, hasRole } = useAuth();
+  
+  if (loading) return <LoadingSpinner fullScreen />;
+  
+  if (!user) return <Navigate to="/login" replace />;
+  
+  // Redirect based on role
+  if (hasRole(['admin'])) {
+    return <Navigate to="/admin" replace />;
+  }
+  
+  if (hasRole(['teacher'])) {
+    return <Navigate to="/teacher/dashboard" replace />;
+  }
+  
+  // Default to learner dashboard
+  return <Dashboard />;
+}
+
 function App() {
   return (
     <ToastProvider>
@@ -79,25 +101,25 @@ function App() {
               } 
             />
             
-            {/* Protected Routes with Sidebar Layout */}
+            {/* Dashboard Router - redirects based on role */}
             <Route
               path="/dashboard"
               element={
                 <PrivateRoute>
                   <AuthenticatedLayout>
-                    <Dashboard />
+                    <DashboardRouter />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
             />
             
-            {/* UPDATED: Subject Browser Route */}
+            {/* Learner Routes */}
             <Route
               path="/subjects"
               element={
-                <PrivateRoute>
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
                   <AuthenticatedLayout>
-                    <SubjectBrowser />  {/* ← CHANGED: Use SubjectBrowser instead of Subjects */}
+                    <SubjectBrowser />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -137,10 +159,11 @@ function App() {
               }
             />
             
+            {/* FIXED: Only admins can register teachers */}
             <Route
               path="/teacher/register"
               element={
-                <PrivateRoute>
+                <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
                     <TeacherRegister />
                   </AuthenticatedLayout>
@@ -164,7 +187,7 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <AuthenticatedLayout>
-                    <div>Teacher Materials Management (Coming Soon)</div>
+                    <Materials />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -175,7 +198,10 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <AuthenticatedLayout>
-                    <div>Teacher Assignments (Coming Soon)</div>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Assignments</h2>
+                      <p className="text-slate-500">Assignment management coming soon...</p>
+                    </div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -186,7 +212,10 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <AuthenticatedLayout>
-                    <div>Grade Submissions (Coming Soon)</div>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Grade Submissions</h2>
+                      <p className="text-slate-500">Grading interface coming soon...</p>
+                    </div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -197,7 +226,10 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <AuthenticatedLayout>
-                    <div>My Students (Coming Soon)</div>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">My Students</h2>
+                      <p className="text-slate-500">Student management coming soon...</p>
+                    </div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -232,6 +264,25 @@ function App() {
                 <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
                     <AdminDashboard />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/teachers"
+              element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AuthenticatedLayout>
+                    <div className="p-8">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-6">Manage Teachers</h2>
+                      <div className="flex gap-4 mb-6">
+                        <Button onClick={() => window.location.href = '/teacher/register'}>
+                          Register New Teacher
+                        </Button>
+                      </div>
+                      <p className="text-slate-500">Teacher management interface coming soon...</p>
+                    </div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
