@@ -5,7 +5,7 @@ import { ToastProvider } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
-import { Button } from './components/common/Button'; // ← ADDED: Import Button
+import { Button } from './components/common/Button';
 
 // Pages
 import { Login } from './pages/Login';
@@ -16,6 +16,8 @@ import { Materials } from './pages/Materials';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
+import { AdminLogin } from './pages/AdminLogin';
+import { PendingTeachers } from './pages/PendingTeachers';
 
 // Role-based protected route
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -33,12 +35,41 @@ function PrivateRoute({ children, allowedRoles = [] }) {
   return children;
 }
 
+// Public route - for regular users only (login, register)
 function PublicRoute({ children }) {
   const { user, loading } = useAuth();
   
   if (loading) return <LoadingSpinner fullScreen />;
   
-  return user ? <Navigate to="/dashboard" replace /> : children;
+  // If already logged in, redirect to appropriate dashboard
+  if (user) {
+    if (user.role === 'admin') {
+      return <Navigate to="/admin/dashboard" replace />;
+    }
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
+}
+
+// Admin public route - completely separate from user flow
+// Prevents regular users from accessing admin login, redirects admins to admin dashboard
+function AdminPublicRoute({ children }) {
+  const { user, loading } = useAuth();
+  
+  if (loading) return <LoadingSpinner fullScreen />;
+  
+  // If already logged in as admin, go to admin dashboard
+  if (user?.role === 'admin') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
+  
+  // If logged in as non-admin, go to regular dashboard
+  if (user) {
+    return <Navigate to="/dashboard" replace />;
+  }
+  
+  return children;
 }
 
 // Layout for authenticated pages (with sidebar)
@@ -55,7 +86,7 @@ function AuthenticatedLayout({ children }) {
   );
 }
 
-// Role-based dashboard redirect
+// Role-based dashboard redirect - for regular users only
 function DashboardRouter() {
   const { user, loading, hasRole } = useAuth();
   
@@ -63,9 +94,9 @@ function DashboardRouter() {
   
   if (!user) return <Navigate to="/login" replace />;
   
-  // Redirect based on role
+  // Admins should never hit this - they have their own dashboard
   if (hasRole(['admin'])) {
-    return <Navigate to="/admin" replace />;
+    return <Navigate to="/admin/dashboard" replace />;
   }
   
   if (hasRole(['teacher'])) {
@@ -83,7 +114,7 @@ function App() {
         <div className="min-h-screen bg-slate-50">
           <Navbar />
           <Routes>
-            {/* Public Routes */}
+            {/* Public Routes - Regular Users */}
             <Route 
               path="/login" 
               element={
@@ -101,7 +132,17 @@ function App() {
               } 
             />
             
-            {/* Dashboard Router - redirects based on role */}
+            {/* Admin Login - Completely separate flow */}
+            <Route 
+              path="/admin/login"
+              element={
+                <AdminPublicRoute>
+                  <AdminLogin />
+                </AdminPublicRoute>
+              } 
+            />
+            
+            {/* Dashboard Router - for regular users (learners/teachers) */}
             <Route
               path="/dashboard"
               element={
@@ -159,7 +200,7 @@ function App() {
               }
             />
             
-            {/* FIXED: Only admins can register teachers */}
+            {/* Only admins can register teachers directly */}
             <Route
               path="/teacher/register"
               element={
@@ -235,13 +276,24 @@ function App() {
               }
             />
             
-            {/* Admin-only Routes */}
+            {/* Admin-only Routes - Completely separate from user routes */}
             <Route
-              path="/admin"
+              path="/admin/dashboard"
               element={
                 <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
                     <AdminDashboard />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/admin/pending-teachers"
+              element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AuthenticatedLayout>
+                    <PendingTeachers />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -280,12 +332,21 @@ function App() {
                         <Button onClick={() => window.location.href = '/teacher/register'}>
                           Register New Teacher
                         </Button>
+                        <Button variant="outline" onClick={() => window.location.href = '/admin/pending-teachers'}>
+                          View Pending Requests
+                        </Button>
                       </div>
-                      <p className="text-slate-500">Teacher management interface coming soon...</p>
+                      <p className="text-slate-500">Teacher management interface. New teacher signups require approval.</p>
                     </div>
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
+            />
+            
+            {/* Redirect /admin to /admin/dashboard */}
+            <Route 
+              path="/admin" 
+              element={<Navigate to="/admin/dashboard" replace />} 
             />
             
             {/* Default Redirects */}

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
+import { Shield } from 'lucide-react';
 
 export function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -17,7 +18,9 @@ export function Login() {
     setError('');
 
     try {
-      await login(formData);
+      // Add loginType: 'user' to indicate this is regular user login
+      // This ensures backend only checks users table, not admins table
+      await login({ ...formData, loginType: 'user' });
       navigate('/dashboard');
     } catch (err) {
       setError(err.message || 'Login failed');
@@ -101,6 +104,30 @@ export function Login() {
               Sign In
             </Button>
           </form>
+
+          {/* Admin Login Option */}
+          <div className="mt-6">
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-slate-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-50 text-slate-500">Or</span>
+              </div>
+            </div>
+
+            <div className="mt-4">
+              <Link to="/admin/login">
+                <Button 
+                  variant="outline" 
+                  className="w-full flex items-center justify-center gap-2"
+                >
+                  <Shield className="w-4 h-4" />
+                  Sign in as Administrator
+                </Button>
+              </Link>
+            </div>
+          </div>
 
           <div className="mt-8 text-center">
             <p className="text-slate-500 text-sm">

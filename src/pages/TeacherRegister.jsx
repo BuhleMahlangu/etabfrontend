@@ -41,7 +41,7 @@ export const TeacherRegister = () => {
 
   const fetchGrades = async () => {
     try {
-      const token = localStorage.getItem('token'); // Get admin token
+      const token = localStorage.getItem('token');
       const response = await fetch(`${API_URL}/subjects/available-grades`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -58,8 +58,8 @@ export const TeacherRegister = () => {
 
   const fetchSubjectsForGrade = async (gradeId) => {
     try {
-      const token = localStorage.getItem('token'); // Get admin token
-      // FIXED: Use teachers/subjects-by-grade endpoint instead
+      const token = localStorage.getItem('token');
+      // FIXED: Use teachers/subjects-by-grade endpoint with auth
       const response = await fetch(`${API_URL}/teachers/subjects-by-grade/${gradeId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
@@ -167,10 +167,10 @@ export const TeacherRegister = () => {
     setLoading(true);
 
     try {
-      const token = localStorage.getItem('token'); // Get admin token
+      const token = localStorage.getItem('token');
       
       // ============================================
-      // FIXED: Use /teachers/register endpoint with Authorization header
+      // CRITICAL FIX: Use /teachers/register endpoint with Authorization header
       // ============================================
       const response = await fetch(`${API_URL}/teachers/register`, {
         method: 'POST',
@@ -200,7 +200,7 @@ export const TeacherRegister = () => {
 
       if (data.success) {
         addToast('Teacher registered successfully!', 'success');
-        navigate('/admin/teachers'); // Redirect to admin teachers list instead of teacher dashboard
+        navigate('/admin/teachers');
       } else {
         throw new Error(data.message || 'Registration failed');
       }

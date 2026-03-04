@@ -5,19 +5,50 @@ const api = axios.create({
 });
 
 api.interceptors.request.use((config) => {
-  // FIXED: Use 'token' instead of 'etab_token'
-  const token = localStorage.getItem('token');
+  let token = localStorage.getItem('token');
+  
+  console.log('🔍 [API] Raw token from localStorage:', token ? 'exists' : 'missing');
+  console.log('🔍 [API] Token type:', typeof token);
+  
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+    // Log first/last chars to see if there are quotes
+    console.log('🔍 [API] Token starts with:', token.charAt(0));
+    console.log('🔍 [API] Token ends with:', token.charAt(token.length - 1));
+    
+    // Aggressive cleaning - remove ALL quotes, whitespace, and newlines
+    token = token
+      .replace(/^["']|["']$/g, '')  // Remove surrounding quotes
+      .replace(/\\"/g, '"')         // Remove escaped quotes
+      .trim();                      // Remove whitespace
+    
+    console.log('🔍 [API] Cleaned token length:', token.length);
+    console.log('🔍 [API] Cleaned token starts with:', token.substring(0, 20));
+    
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('✅ [API] Token attached to:', config.url);
+    } else {
+      console.log('❌ [API] Token became empty after cleaning');
+    }
+  } else {
+    console.log('⚠️ [API] No token found for:', config.url);
   }
+  
   return config;
 });
 
 api.interceptors.response.use(
   (response) => response.data,
   (error) => {
+    console.error('❌ [API] Error:', {
+      status: error.response?.status,
+      url: error.config?.url,
+      data: error.response?.data,
+      message: error.message
+    });
+    
     if (error.response?.status === 401) {
-      // FIXED: Use 'token' instead of 'etab_token'
+      console.log('🚫 [API] 401 error - clearing token and redirecting');
       localStorage.removeItem('token');
       window.location.href = '/login';
     }

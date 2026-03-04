@@ -3,8 +3,7 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { subjectAPI } from '../services/api';  // USE AUTHENTICATED API SERVICE
 
 export function Dashboard() {
   const { user } = useAuth();
@@ -12,34 +11,22 @@ export function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // FIXED: Use correct token key and endpoint
-  const getToken = () => localStorage.getItem('token') || sessionStorage.getItem('token');
-
   useEffect(() => {
     const fetchSubjects = async () => {
-      const token = getToken();
-      
-      if (!token) {
-        setError('Not authenticated');
-        setLoading(false);
+      // Wait for user to be loaded from AuthContext
+      if (!user) {
+        console.log('⏳ [Dashboard] Waiting for user to load...');
         return;
       }
 
       try {
-        // FIXED: Use /my-subjects endpoint instead of /grade/:grade
-        const response = await fetch(`${API_URL}/subjects/my-subjects`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        });
-
-        if (!response.ok) {
-          throw new Error(`Failed to fetch: ${response.status}`);
-        }
-
-        const data = await response.json();
+        console.log('🔍 [Dashboard] Fetching subjects for user:', user.email);
         
+        // Use authenticated API service - automatically includes token via interceptors
+        const data = await subjectAPI.getMySubjects();
+        
+        console.log('✅ [Dashboard] Subjects data received:', data);
+
         if (data.success) {
           // Combine doing and available subjects
           const allSubjects = [
@@ -51,38 +38,75 @@ export function Dashboard() {
           throw new Error(data.message || 'Failed to load subjects');
         }
       } catch (err) {
-        console.error('Failed to fetch subjects:', err);
-        setError(err.message);
+        console.error('❌ [Dashboard] Failed to fetch subjects:', err);
+        
+        // Handle specific error types
+        if (err.message?.includes('401') || err.status === 401) {
+          setError('Session expired. Please log in again.');
+        } else {
+          setError(err.message || 'Failed to load subjects');
+        }
       } finally {
         setLoading(false);
       }
     };
 
     fetchSubjects();
-  }, []);
+  }, [user]); // Re-run when user changes
 
-  if (loading) return <div className="p-8">Loading...</div>;
+  // Show loading while waiting for user or subjects
+  if (loading) {
+    return (
+      <div className="p-8 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-500">Loading your subjects...</p>
+        </div>
+      </div>
+    );
+  }
   
-  if (error) return (
-    <div className="p-8 text-red-600">
-      Error: {error}. <Link to="/login" className="underline">Please log in again</Link>
-    </div>
-  );
+  // Show error if fetch failed
+  if (error) {
+    return (
+      <div className="p-8 text-center">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md mx-auto">
+          <p className="text-red-600 mb-4">{error}</p>
+          <Link 
+            to="/login" 
+            className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            Log In Again
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header */}
       <div className="flex items-center gap-4 mb-8">
-        <img src="/E-tab logo.png" alt="E-tab" className="h-12 w-auto" />
+        <img 
+          src="/E-tab logo.png" 
+          alt="E-tab" 
+          className="h-12 w-auto"
+          onError={(e) => {
+            e.target.style.display = 'none';
+          }}
+        />
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Hi, {user?.firstName || 'Student'}! 👋</h1>
+          <h1 className="text-2xl font-bold text-slate-900">
+            Hi, {user?.firstName || user?.first_name || 'Student'}! 👋
+          </h1>
           <p className="text-slate-500">
-            {user?.grade || 'No grade'} • {subjects.length} Subjects
+            {user?.grade || user?.currentGrade || user?.current_grade || 'No grade'} • {subjects.length} Subjects
             {user?.phase && ` • ${user.phase}`}
           </p>
         </div>
       </div>
 
+      {/* Subjects Grid */}
       {subjects.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-xl border border-dashed border-slate-300">
           <p className="text-slate-500 mb-2">No subjects found</p>
@@ -99,18 +123,26 @@ export function Dashboard() {
             <Link 
               key={subject.id} 
               to={`/subjects/${subject.id}`}
-              className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition border border-slate-100"
+              className="bg-white rounded-xl p-5 shadow-sm hover:shadow-md transition border border-slate-100 group"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-xl font-bold
                   ${subject.phase === 'Foundation' ? 'bg-pink-100 text-pink-600' :
                     subject.phase === 'Intermediate' ? 'bg-blue-100 text-blue-600' :
-                    subject.phase === 'Senior' ? 'bg-purple-100 text-purple-600' : 'bg-orange-100 text-orange-600'}`}>
-                  {subject.code?.replace(/-.*$/, '') || 'S'}
+                    subject.phase === 'Senior' ? 'bg-purple-100 text-purple-600' : 
+                    'bg-orange-100 text-orange-600'}`}>
+                  {subject.code?.replace(/-.*$/, '') || subject.name?.charAt(0) || 'S'}
                 </div>
-                {subject.isCompulsory ? <Badge variant="primary">Core</Badge> : <Badge>Elective</Badge>}
+                {subject.isCompulsory ? (
+                  <Badge variant="primary">Core</Badge>
+                ) : (
+                  <Badge>Elective</Badge>
+                )}
               </div>
-              <h3 className="font-semibold text-slate-900 text-lg">{subject.name}</h3>
+              
+              <h3 className="font-semibold text-slate-900 text-lg group-hover:text-blue-600 transition-colors">
+                {subject.name}
+              </h3>
               <p className="text-sm text-slate-500">{subject.department}</p>
               
               {/* Progress bar for enrolled subjects */}
@@ -122,7 +154,7 @@ export function Dashboard() {
                   </div>
                   <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div 
-                      className="h-full bg-blue-600 rounded-full"
+                      className="h-full bg-blue-600 rounded-full transition-all"
                       style={{ width: `${subject.progress || 0}%` }}
                     />
                   </div>
@@ -130,8 +162,8 @@ export function Dashboard() {
               )}
               
               <div className="mt-4 flex items-center gap-3 text-xs text-slate-400">
-                <span>📚 Materials</span>
-                {subject.isEnrolled && <span>✓ Enrolled</span>}
+                <span>📚 {subject.materialCount || 0} Materials</span>
+                {subject.isEnrolled && <span className="text-green-600">✓ Enrolled</span>}
               </div>
             </Link>
           ))}
