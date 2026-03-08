@@ -63,11 +63,11 @@ export const TeacherDashboard = () => {
       }
       
       if (data.success) {
-        setDashboard(data);
+        setDashboard(data.dashboard); // <-- FIXED: Use data.dashboard
         // Expand first grade by default
-        if (data.grades && data.grades.length > 0) {
-          setSelectedGrade(data.grades[0]);
-          setExpandedGrades(new Set([data.grades[0].gradeId]));
+        if (data.dashboard.grades && data.dashboard.grades.length > 0) {
+          setSelectedGrade(data.dashboard.grades[0]);
+          setExpandedGrades(new Set([data.dashboard.grades[0].gradeId]));
         }
       } else {
         addToast(data.message || 'Failed to load dashboard', 'error');
@@ -131,7 +131,7 @@ export const TeacherDashboard = () => {
     );
   }
 
-  const { teacher, stats, grades, recentMaterials, recentActivity, academicYear } = dashboard;
+  const { teacher, stats, grades, recentActivity, academicYear } = dashboard;
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
@@ -140,7 +140,7 @@ export const TeacherDashboard = () => {
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
-              Welcome, {teacher.firstName}! 👋
+              Welcome, {teacher?.firstName || 'Teacher'}! 👋
             </h1>
             <p className="text-slate-500 mt-1">
               Academic Year: {academicYear}
@@ -175,7 +175,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Grades Teaching</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalGrades}</p>
+                  <p className="text-2xl font-bold text-slate-900">{grades?.length || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -189,7 +189,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Subjects</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalSubjects}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats?.totalSubjects || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -203,7 +203,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Total Learners</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalLearners}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats?.totalStudents || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -217,7 +217,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Materials</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats.totalMaterials}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats?.totalMaterials || 0}</p>
                 </div>
               </div>
             </CardContent>
@@ -235,7 +235,7 @@ export const TeacherDashboard = () => {
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {grades.length === 0 ? (
+                {!grades || grades.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     <p>No subjects assigned yet.</p>
                     <p className="text-sm">Contact an administrator to get assigned to subjects.</p>
@@ -258,7 +258,7 @@ export const TeacherDashboard = () => {
                             <div>
                               <h3 className="font-semibold text-slate-900">{grade.gradeName}</h3>
                               <p className="text-sm text-slate-500">
-                                {grade.subjects.length} subjects • {grade.totalLearners} learners
+                                {grade.subjects?.length || 0} subjects
                               </p>
                             </div>
                           </div>
@@ -268,14 +268,14 @@ export const TeacherDashboard = () => {
                         {/* Subjects List */}
                         {expandedGrades.has(grade.gradeId) && (
                           <div className="p-4 space-y-3">
-                            {grade.subjects.map((subject) => (
+                            {grade.subjects?.map((subject) => (
                               <div
                                 key={subject.subjectId}
                                 className="flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
                               >
                                 <div className="flex items-center gap-3">
                                   <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                                    {subject.code.replace(/-.*$/, '')}
+                                    {subject.code?.replace(/-.*$/, '') || 'S'}
                                   </div>
                                   <div>
                                     <h4 className="font-medium text-slate-900">{subject.name}</h4>
@@ -284,9 +284,6 @@ export const TeacherDashboard = () => {
                                 </div>
                                 <div className="flex items-center gap-3">
                                   <div className="text-right">
-                                    <p className="text-sm font-medium text-slate-900">
-                                      {subject.learnerCount} learners
-                                    </p>
                                     {subject.isPrimary && (
                                       <Badge variant="success" className="text-xs">Primary</Badge>
                                     )}
@@ -310,12 +307,12 @@ export const TeacherDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Recent Materials */}
+            {/* Recent Activity (renamed from recentMaterials to match backend) */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle className="flex items-center gap-2">
                   <FolderOpen className="w-5 h-5" />
-                  Recent Materials
+                  Recent Activity
                 </CardTitle>
                 <Button 
                   variant="ghost" 
@@ -326,7 +323,7 @@ export const TeacherDashboard = () => {
                 </Button>
               </CardHeader>
               <CardContent>
-                {recentMaterials.length === 0 ? (
+                {!recentActivity || recentActivity.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
                     <p>No materials uploaded yet.</p>
                     <Button 
@@ -339,23 +336,19 @@ export const TeacherDashboard = () => {
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {recentMaterials.map((material) => (
+                    {recentActivity.map((activity) => (
                       <div
-                        key={material.id}
+                        key={activity.id}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors"
                       >
                         <div className="flex items-center gap-3">
-                          <span className="text-2xl">{getFileIcon(material.fileType)}</span>
+                          <span className="text-2xl">{getFileIcon(activity.fileType)}</span>
                           <div>
-                            <h4 className="font-medium text-slate-900">{material.title}</h4>
+                            <h4 className="font-medium text-slate-900">{activity.title}</h4>
                             <p className="text-sm text-slate-500">
-                              {material.gradeName} • {material.subjectName} • {formatDate(material.createdAt)}
+                              {activity.gradeName} • {activity.subjectName} • {formatDate(activity.createdAt)}
                             </p>
                           </div>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-slate-500">
-                          <TrendingUp className="w-4 h-4" />
-                          {material.downloadCount} downloads
                         </div>
                       </div>
                     ))}
@@ -388,45 +381,38 @@ export const TeacherDashboard = () => {
                   <FileText className="w-4 h-4" />
                   Create Assignment
                 </Button>
+                {/* ADDED: My Learners Button */}
                 <Button 
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => navigate('/teacher/students')}
+                  onClick={() => navigate('/teacher/learners')}
                 >
                   <Users className="w-4 h-4" />
-                  View My Students
+                  My Learners
                 </Button>
+                {/* END ADDED */}
               </CardContent>
             </Card>
 
-            {/* Recent Activity */}
+            {/* Recent Activity - hidden if no data or use stats */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Clock className="w-5 h-5" />
-                  Recent Activity
+                  Quick Stats
                 </CardTitle>
               </CardHeader>
               <CardContent>
-                {recentActivity.length === 0 ? (
-                  <p className="text-center text-slate-500 py-4">No recent activity</p>
-                ) : (
-                  <div className="space-y-4">
-                    {recentActivity.map((activity, index) => (
-                      <div key={index} className="flex gap-3">
-                        <div className={`w-2 h-2 rounded-full mt-2 ${
-                          activity.type === 'submission' ? 'bg-green-500' : 'bg-blue-500'
-                        }`} />
-                        <div>
-                          <p className="text-sm text-slate-900">{activity.title}</p>
-                          <p className="text-xs text-slate-500">
-                            {activity.studentName} • {formatDate(activity.date)}
-                          </p>
-                        </div>
-                      </div>
-                    ))}
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                    <span className="text-sm text-slate-600">Recent Uploads (7 days)</span>
+                    <span className="font-semibold text-slate-900">{stats?.recentUploads || 0}</span>
                   </div>
-                )}
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                    <span className="text-sm text-slate-600">Pending to Grade</span>
+                    <span className="font-semibold text-slate-900">{stats?.pendingGrading || 0}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -16,6 +16,7 @@ import { Materials } from './pages/Materials';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
+import { TeacherLearners } from './pages/TeacherLearners'; // <-- ADD THIS IMPORT
 import { AdminLogin } from './pages/AdminLogin';
 import { PendingTeachers } from './pages/PendingTeachers';
 
@@ -53,7 +54,6 @@ function PublicRoute({ children }) {
 }
 
 // Admin public route - completely separate from user flow
-// Prevents regular users from accessing admin login, redirects admins to admin dashboard
 function AdminPublicRoute({ children }) {
   const { user, loading } = useAuth();
   
@@ -195,6 +195,18 @@ function App() {
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <AuthenticatedLayout>
                     <TeacherDashboard />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* ADD THIS NEW ROUTE - Teacher Learners */}
+            <Route
+              path="/teacher/learners"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <AuthenticatedLayout>
+                    <TeacherLearners />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }

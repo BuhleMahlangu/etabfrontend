@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { Shield } from 'lucide-react';
+import { TeacherStatusCheck } from '../components/TeacherStatusCheck';
 
 export function Login() {
   const [formData, setFormData] = useState({ email: '', password: '' });
@@ -128,6 +129,9 @@ export function Login() {
               </Link>
             </div>
           </div>
+
+          {/* Teacher Registration Status Check - AT THE BOTTOM */}
+          <TeacherStatusCheck />
 
           <div className="mt-8 text-center">
             <p className="text-slate-500 text-sm">

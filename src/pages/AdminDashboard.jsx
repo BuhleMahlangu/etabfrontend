@@ -13,7 +13,16 @@ import {
   AlertCircle,
   ChevronRight,
   GraduationCap,
-  FolderOpen
+  FolderOpen,
+  CheckCircle,
+  XCircle,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Mail,
+  Briefcase,
+  Award,
+  Calendar
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -23,10 +32,21 @@ export const AdminDashboard = () => {
     totalLearners: 0,
     totalTeachers: 0,
     pendingTeachers: 0,
-    totalSubjects: 0
+    totalAdmins: 0,
+    recentPending: 0
   });
+  const [pendingTeachers, setPendingTeachers] = useState([]);
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'pending'
+  
+  // Modal states
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState('');
+  const [showRejectModal, setShowRejectModal] = useState(false);
+  const [processingId, setProcessingId] = useState(null);
+  
   const { addToast } = useToast();
   const navigate = useNavigate();
 
@@ -35,32 +55,39 @@ export const AdminDashboard = () => {
   }, []);
 
   const fetchDashboardData = async () => {
+    setLoading(true);
     try {
       const token = localStorage.getItem('token');
       
-      // Fetch stats from multiple endpoints
-      const [teachersRes, pendingRes, subjectsRes] = await Promise.all([
-        fetch(`${API_URL}/teachers/all`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_URL}/admin/pending-teachers`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        }),
-        fetch(`${API_URL}/subjects/available-grades`, {
-          headers: { 'Authorization': `Bearer ${token}` }
-        })
-      ]);
-
-      const teachersData = await teachersRes.json();
-      const pendingData = await pendingRes.json();
-      const subjectsData = await subjectsRes.json();
-
-      setStats({
-        totalTeachers: teachersData.count || 0,
-        pendingTeachers: pendingData.count || 0,
-        totalSubjects: subjectsData.grades?.reduce((sum, g) => sum + (g.total_modules || 0), 0) || 0,
-        totalLearners: 0 // Would need separate endpoint
+      // Fetch dashboard stats - UPDATED URL
+      const statsRes = await fetch(`${API_URL}/admin/dashboard`, {
+        headers: { 'Authorization': `Bearer ${token}` }
       });
+      
+      if (statsRes.ok) {
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          setStats({
+            totalLearners: statsData.data?.totalLearners || 0,
+            totalTeachers: statsData.data?.totalTeachers || 0,
+            pendingTeachers: statsData.data?.pendingTeachers || 0,
+            totalAdmins: statsData.data?.totalAdmins || 0,
+            recentPending: statsData.data?.recentPending || 0
+          });
+        }
+      }
+
+      // Fetch pending teachers - UPDATED URL
+      const pendingRes = await fetch(`${API_URL}/admin/teachers/pending`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      
+      if (pendingRes.ok) {
+        const pendingData = await pendingRes.json();
+        if (pendingData.success) {
+          setPendingTeachers(pendingData.teachers || []);
+        }
+      }
 
       // Mock recent activity - in real app, fetch from admin logs
       setRecentActivity([
@@ -77,6 +104,309 @@ export const AdminDashboard = () => {
     }
   };
 
+  const handleApprove = async (pendingId) => {
+    setProcessingId(pendingId);
+    try {
+      const token = localStorage.getItem('token');
+      // UPDATED URL to match new route structure
+      const response = await fetch(`${API_URL}/admin/teachers/${pendingId}/approve`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        addToast('Teacher approved successfully!', 'success');
+        fetchDashboardData();
+        setShowDetailsModal(false);
+      } else {
+        addToast(data.message || 'Failed to approve teacher', 'error');
+      }
+    } catch (error) {
+      console.error('Error approving teacher:', error);
+      addToast('Failed to approve teacher', 'error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const handleReject = async (pendingId) => {
+    setProcessingId(pendingId);
+    try {
+      const token = localStorage.getItem('token');
+      // UPDATED URL to match new route structure
+      const response = await fetch(`${API_URL}/admin/teachers/${pendingId}/reject`, {
+        method: 'POST',
+        headers: { 
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ reason: rejectionReason })
+      });
+      
+      const data = await response.json();
+      
+      if (data.success) {
+        addToast('Teacher registration rejected', 'success');
+        fetchDashboardData();
+        setShowRejectModal(false);
+        setShowDetailsModal(false);
+        setRejectionReason('');
+      } else {
+        addToast(data.message || 'Failed to reject teacher', 'error');
+      }
+    } catch (error) {
+      console.error('Error rejecting teacher:', error);
+      addToast('Failed to reject teacher', 'error');
+    } finally {
+      setProcessingId(null);
+    }
+  };
+
+  const openTeacherDetails = (teacher) => {
+    setSelectedTeacher(teacher);
+    setShowDetailsModal(true);
+  };
+
+  // PENDING TEACHERS VIEW
+  if (activeView === 'pending') {
+    return (
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <button 
+              onClick={() => setActiveView('dashboard')}
+              className="text-sm text-slate-500 hover:text-slate-700 mb-2 flex items-center gap-1"
+            >
+              ← Back to Dashboard
+            </button>
+            <h1 className="text-3xl font-bold text-slate-900">Pending Teacher Approvals</h1>
+            <p className="text-slate-500 mt-2">
+              Review and manage teacher registration requests
+            </p>
+          </div>
+          <Badge variant="amber" className="text-lg px-4 py-2">
+            {pendingTeachers.length} Pending
+          </Badge>
+        </div>
+
+        {pendingTeachers.length === 0 ? (
+          <Card className="p-12 text-center">
+            <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-slate-900 mb-2">All Caught Up!</h3>
+            <p className="text-slate-500">No pending teacher registrations to review.</p>
+            <Button 
+              className="mt-6" 
+              onClick={() => setActiveView('dashboard')}
+            >
+              Return to Dashboard
+            </Button>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {pendingTeachers.map((teacher) => (
+              <Card key={teacher.id} className="hover:shadow-md transition-shadow">
+                <CardContent className="p-6">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-4">
+                      <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <GraduationCap className="w-6 h-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold text-slate-900">
+                          {teacher.firstName} {teacher.lastName}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-1 text-sm text-slate-500">
+                          <span className="flex items-center gap-1">
+                            <Mail className="w-4 h-4" />
+                            {teacher.email}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Briefcase className="w-4 h-4" />
+                            {teacher.yearsExperience} years exp.
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            Applied {new Date(teacher.requestedAt).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <div className="flex flex-wrap gap-2 mt-3">
+                          <Badge variant="outline">{teacher.qualification}</Badge>
+                          <Badge variant="outline">{teacher.specialization}</Badge>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="outline" 
+                        onClick={() => openTeacherDetails(teacher)}
+                      >
+                        Review Details
+                      </Button>
+                      <Button 
+                        onClick={() => handleApprove(teacher.id)}
+                        disabled={processingId === teacher.id}
+                      >
+                        {processingId === teacher.id ? 'Processing...' : 'Quick Approve'}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        {/* Teacher Details Modal */}
+        {showDetailsModal && selectedTeacher && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-2xl shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6 border-b border-slate-200 flex items-center justify-between">
+                <h2 className="text-xl font-bold text-slate-900">Teacher Application</h2>
+                <button 
+                  onClick={() => setShowDetailsModal(false)}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <XCircle className="w-6 h-6" />
+                </button>
+              </div>
+              
+              <div className="p-6 space-y-6">
+                {/* Header Info */}
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center">
+                    <GraduationCap className="w-8 h-8 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-900">
+                      {selectedTeacher.firstName} {selectedTeacher.lastName}
+                    </h3>
+                    <p className="text-slate-500">{selectedTeacher.email}</p>
+                    <Badge variant="amber" className="mt-1">Pending Approval</Badge>
+                  </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-2 gap-4">
+                  <DetailItem label="Employee Number" value={selectedTeacher.employeeNumber} />
+                  <DetailItem label="Years of Experience" value={`${selectedTeacher.yearsExperience} years`} />
+                  <DetailItem label="Qualification" value={selectedTeacher.qualification} />
+                  <DetailItem label="Specialization" value={selectedTeacher.specialization} />
+                </div>
+
+                <DetailItem label="Bio" value={selectedTeacher.bio} fullWidth />
+
+                {/* Subject Assignments */}
+                {selectedTeacher.assignments && selectedTeacher.assignments.length > 0 && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Requested Subject Assignments
+                    </label>
+                    <div className="space-y-2">
+                      {selectedTeacher.assignments.map((assignment, idx) => (
+                        <div key={idx} className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                          <div className="flex items-center justify-between">
+                            <span className="font-medium text-slate-900">{assignment.gradeName}</span>
+                            {assignment.isPrimary && (
+                              <Badge variant="blue" size="sm">Primary</Badge>
+                            )}
+                          </div>
+                          <p className="text-sm text-slate-500 mt-1">
+                            {assignment.subjectIds?.length || 0} subjects assigned
+                          </p>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="text-sm text-slate-500 bg-slate-50 p-3 rounded-lg">
+                  <Calendar className="w-4 h-4 inline mr-2" />
+                  Applied on {new Date(selectedTeacher.requestedAt).toLocaleString()}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="p-6 border-t border-slate-200 bg-slate-50 flex gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowDetailsModal(false)}
+                  disabled={processingId === selectedTeacher.id}
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => setShowRejectModal(true)}
+                  disabled={processingId === selectedTeacher.id}
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Reject
+                </Button>
+                <Button
+                  onClick={() => handleApprove(selectedTeacher.id)}
+                  disabled={processingId === selectedTeacher.id}
+                  className="flex-1"
+                >
+                  {processingId === selectedTeacher.id ? (
+                    'Processing...'
+                  ) : (
+                    <>
+                      <CheckCircle className="w-4 h-4 mr-2" />
+                      Approve Teacher
+                    </>
+                  )}
+                </Button>
+              </div>
+            </div>
+
+            {/* Rejection Modal */}
+            {showRejectModal && (
+              <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-[60]">
+                <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6">
+                  <h3 className="text-lg font-bold text-slate-900 mb-4">Reject Application</h3>
+                  <p className="text-sm text-slate-600 mb-4">
+                    Please provide a reason for rejecting {selectedTeacher.firstName} {selectedTeacher.lastName}'s application.
+                  </p>
+                  <textarea
+                    value={rejectionReason}
+                    onChange={(e) => setRejectionReason(e.target.value)}
+                    placeholder="Enter rejection reason..."
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 mb-4 min-h-[100px]"
+                  />
+                  <div className="flex gap-3">
+                    <Button 
+                      variant="outline" 
+                      onClick={() => setShowRejectModal(false)}
+                      disabled={processingId === selectedTeacher.id}
+                    >
+                      Cancel
+                    </Button>
+                    <Button
+                      variant="danger"
+                      onClick={() => handleReject(selectedTeacher.id)}
+                      disabled={processingId === selectedTeacher.id || !rejectionReason.trim()}
+                      className="flex-1"
+                    >
+                      {processingId === selectedTeacher.id ? 'Processing...' : 'Confirm Reject'}
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // MAIN DASHBOARD VIEW
   const statCards = [
     {
       title: 'Total Learners',
@@ -97,15 +427,15 @@ export const AdminDashboard = () => {
       value: stats.pendingTeachers,
       icon: Clock,
       color: 'amber',
-      link: '/admin/pending-teachers',
+      onClick: () => setActiveView('pending'),
       alert: stats.pendingTeachers > 0
     },
     {
-      title: 'Total Subjects',
-      value: stats.totalSubjects,
-      icon: BookOpen,
+      title: 'Administrators',
+      value: stats.totalAdmins,
+      icon: Award,
       color: 'purple',
-      link: '/admin/subjects'
+      link: '/admin/admins'
     }
   ];
 
@@ -142,9 +472,7 @@ export const AdminDashboard = () => {
             </div>
           </div>
           <Button 
-            variant="outline" 
-            onClick={() => navigate('/admin/pending-teachers')}
-            className="border-amber-300 text-amber-700 hover:bg-amber-100"
+            onClick={() => setActiveView('pending')}
           >
             Review Now
           </Button>
@@ -156,8 +484,8 @@ export const AdminDashboard = () => {
         {statCards.map((stat, idx) => (
           <Card 
             key={idx} 
-            className="cursor-pointer hover:shadow-md transition-shadow"
-            onClick={() => navigate(stat.link)}
+            className={`cursor-pointer hover:shadow-md transition-shadow ${stat.onClick ? '' : ''}`}
+            onClick={stat.onClick || (() => navigate(stat.link))}
           >
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -191,7 +519,7 @@ export const AdminDashboard = () => {
               <Button 
                 variant="outline" 
                 className="justify-start h-auto py-4"
-                onClick={() => navigate('/teacher/register')}
+                onClick={() => navigate('/register')}
               >
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-blue-100 rounded-lg">
@@ -207,7 +535,7 @@ export const AdminDashboard = () => {
               <Button 
                 variant="outline" 
                 className="justify-start h-auto py-4"
-                onClick={() => navigate('/admin/pending-teachers')}
+                onClick={() => setActiveView('pending')}
               >
                 <div className="flex items-start gap-3">
                   <div className="p-2 bg-amber-100 rounded-lg">
@@ -305,7 +633,10 @@ export const AdminDashboard = () => {
                 </div>
                 <span className="text-lg font-bold">{stats.totalTeachers}</span>
               </div>
-              <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+              <div 
+                className="flex items-center justify-between p-3 bg-amber-50 rounded-lg cursor-pointer hover:bg-amber-100 transition-colors"
+                onClick={() => setActiveView('pending')}
+              >
                 <div className="flex items-center gap-3">
                   <Clock className="w-5 h-5 text-amber-600" />
                   <span className="font-medium">Pending Approval</span>
@@ -315,8 +646,9 @@ export const AdminDashboard = () => {
             </div>
             <Button 
               className="w-full mt-4" 
-              onClick={() => navigate('/admin/pending-teachers')}
+              onClick={() => setActiveView('pending')}
               disabled={stats.pendingTeachers === 0}
+              variant={stats.pendingTeachers > 0 ? 'default' : 'outline'}
             >
               {stats.pendingTeachers > 0 ? 'Review Pending Requests' : 'No Pending Requests'}
             </Button>
@@ -327,27 +659,24 @@ export const AdminDashboard = () => {
           <CardHeader className="flex flex-row items-center justify-between">
             <CardTitle className="flex items-center gap-2">
               <FolderOpen className="w-5 h-5" />
-              Content Overview
+              System Overview
             </CardTitle>
-            <Button size="sm" variant="outline">
-              Manage
-            </Button>
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <BookOpen className="w-5 h-5 text-purple-600" />
-                  <span className="font-medium">Total Subjects</span>
+                  <Award className="w-5 h-5 text-purple-600" />
+                  <span className="font-medium">Administrators</span>
                 </div>
-                <span className="text-lg font-bold">{stats.totalSubjects}</span>
+                <span className="text-lg font-bold">{stats.totalAdmins}</span>
               </div>
               <div className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="w-5 h-5 text-blue-600" />
-                  <span className="font-medium">Materials Uploaded</span>
+                  <span className="font-medium">New This Week</span>
                 </div>
-                <span className="text-lg font-bold">-</span>
+                <span className="text-lg font-bold">{stats.recentPending}</span>
               </div>
             </div>
           </CardContent>
@@ -356,3 +685,15 @@ export const AdminDashboard = () => {
     </div>
   );
 };
+
+// Helper Component
+function DetailItem({ label, value, fullWidth = false }) {
+  return (
+    <div className={fullWidth ? 'col-span-2' : ''}>
+      <label className="block text-sm font-medium text-slate-700 mb-1">{label}</label>
+      <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+        <p className="text-sm text-slate-900">{value || 'N/A'}</p>
+      </div>
+    </div>
+  );
+}
