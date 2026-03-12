@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useSubject } from '../components/dashboard/SubjectContext';
+import { SubjectSiteSelector } from '../components/dashboard/SubjectSiteSelector';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
@@ -20,7 +22,10 @@ import {
   FolderOpen,
   Award,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  Eye,
+  User,
+  BarChart3
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -28,55 +33,89 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 export const TeacherDashboard = () => {
   const navigate = useNavigate();
   const { addToast } = useToast();
+  const { currentSubject, availableSubjects, loading: subjectLoading, selectSubject } = useSubject();
+  
   const [dashboard, setDashboard] = useState(null);
+  const [learners, setLearners] = useState([]);
+  const [materials, setMaterials] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [learnersLoading, setLearnersLoading] = useState(false);
   const [selectedGrade, setSelectedGrade] = useState(null);
   const [expandedGrades, setExpandedGrades] = useState(new Set());
+  const [showLearnersModal, setShowLearnersModal] = useState(false);
+  const [stats, setStats] = useState({
+    totalLearners: 0,
+    totalMaterials: 0,
+    recentUploads: 0
+  });
 
+  // Fetch data when current subject changes
   useEffect(() => {
-    fetchDashboard();
-  }, []);
+    if (currentSubject) {
+      fetchDashboardData();
+    } else if (!subjectLoading) {
+      setLoading(false);
+    }
+  }, [currentSubject]);
 
-  const fetchDashboard = async () => {
+  const fetchDashboardData = async () => {
     try {
+      setLoading(true);
       const token = localStorage.getItem('token');
-      if (!token) {
-        addToast('Please log in', 'error');
-        navigate('/login');
-        return;
+      
+      // Fetch learners filtered by current subject
+      const learnersRes = await fetch(
+        `${API_URL}/teacher-learners/my-learners?subjectId=${currentSubject.subjectId}`, 
+        {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      const learnersData = await learnersRes.json();
+      
+      if (learnersData.success) {
+        setLearners(learnersData.data?.learners || []);
+        setStats(prev => ({ ...prev, totalLearners: learnersData.data?.learners?.length || 0 }));
       }
 
-      const response = await fetch(`${API_URL}/teachers/dashboard`, {
+      // Fetch materials for current subject
+      const materialsRes = await fetch(
+        `${API_URL}/materials?subjectId=${currentSubject.subjectId}`,
+        {
+          headers: { 
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      const materialsData = await materialsRes.json();
+      
+      if (materialsData.success) {
+        setMaterials(materialsData.data || []);
+        setStats(prev => ({ ...prev, totalMaterials: materialsData.data?.length || 0 }));
+      }
+
+      // Fetch dashboard stats
+      const dashboardRes = await fetch(`${API_URL}/teachers/dashboard`, {
         headers: { 
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       });
+      const dashboardData = await dashboardRes.json();
       
-      const data = await response.json();
-      
-      if (response.status === 401) {
-        localStorage.removeItem('token');
-        addToast('Session expired. Please log in again.', 'error');
-        navigate('/login');
-        return;
+      if (dashboardData.success) {
+        setDashboard(dashboardData.dashboard);
       }
       
-      if (data.success) {
-        setDashboard(data.dashboard); // <-- FIXED: Use data.dashboard
-        // Expand first grade by default
-        if (data.dashboard.grades && data.dashboard.grades.length > 0) {
-          setSelectedGrade(data.dashboard.grades[0]);
-          setExpandedGrades(new Set([data.dashboard.grades[0].gradeId]));
-        }
-      } else {
-        addToast(data.message || 'Failed to load dashboard', 'error');
-      }
     } catch (error) {
-      console.error('Error fetching dashboard:', error);
-      addToast('Error loading dashboard', 'error');
+      console.error('Error fetching dashboard data:', error);
+      addToast('Error loading dashboard data', 'error');
     } finally {
       setLoading(false);
+      setLearnersLoading(false);
     }
   };
 
@@ -118,32 +157,141 @@ export const TeacherDashboard = () => {
     });
   };
 
-  if (loading) return <LoadingSpinner fullScreen />;
+  // Group learners by grade for current subject only
+  const learnersByGrade = learners.reduce((acc, learner) => {
+    const gradeKey = learner.grade_id || learner.gradeId;
+    if (!acc[gradeKey]) {
+      acc[gradeKey] = {
+        gradeId: gradeKey,
+        gradeName: learner.grade_name || learner.gradeName,
+        learners: []
+      };
+    }
+    acc[gradeKey].learners.push(learner);
+    return acc;
+  }, {});
 
-  if (!dashboard) {
+  // Loading state
+  if (subjectLoading || loading) {
+    return <LoadingSpinner fullScreen />;
+  }
+
+  // No subjects assigned
+  if (availableSubjects.length === 0) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-slate-500 mb-4">Failed to load dashboard</p>
-          <Button onClick={fetchDashboard}>Retry</Button>
+        <div className="text-center max-w-md">
+          <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mx-auto mb-4">
+            <BookOpen className="w-8 h-8 text-amber-600" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-900 mb-2">No Subjects Assigned</h2>
+          <p className="text-slate-500 mb-4">
+            You haven't been assigned to any subjects yet. Contact an administrator to get assigned.
+          </p>
+          <Button onClick={() => window.location.reload()}>Refresh</Button>
         </div>
       </div>
     );
   }
 
-  const { teacher, stats, grades, recentActivity, academicYear } = dashboard;
+  // No subject selected
+  if (!currentSubject) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="text-center max-w-md">
+          <h2 className="text-xl font-bold text-slate-900 mb-4">Select a Subject</h2>
+          <SubjectSiteSelector />
+        </div>
+      </div>
+    );
+  }
+
+  const { teacher, academicYear } = dashboard || {};
 
   return (
-    <div className="min-h-screen bg-slate-50 p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
+    <div className="min-h-screen bg-slate-50">
+      {/* Sticky Subject Site Header */}
+      <div className="bg-white border-b sticky top-0 z-40 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <h1 className="text-lg font-bold text-slate-900 hidden sm:block">
+                Teacher Portal
+              </h1>
+              <div className="h-6 w-px bg-slate-200 hidden sm:block" />
+              <SubjectSiteSelector />
+            </div>
+            <div className="flex items-center gap-3">
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={() => navigate('/teacher/profile')}
+                className="hidden sm:flex"
+              >
+                Profile
+              </Button>
+              <Button 
+                size="sm"
+                onClick={() => navigate(`/materials/upload?subjectId=${currentSubject.subjectId}`)}
+                className="flex items-center gap-2"
+              >
+                <Upload className="w-4 h-4" />
+                <span className="hidden sm:inline">Upload</span>
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+        {/* Subject Context Banner */}
+        <div className="mb-6 bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-4 sm:p-6 text-white shadow-lg">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex items-start sm:items-center gap-4">
+              <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-xl bg-white/20 flex items-center justify-center backdrop-blur-sm">
+                <BookOpen className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              </div>
+              <div>
+                <p className="text-blue-100 text-sm font-medium mb-1">Current Subject Site</p>
+                <h2 className="text-xl sm:text-2xl font-bold text-white">
+                  {currentSubject.subjectName}
+                </h2>
+                <div className="flex flex-wrap items-center gap-2 mt-1 text-blue-100 text-sm">
+                  <span>{currentSubject.subjectCode}</span>
+                  <span>•</span>
+                  <span>{currentSubject.department}</span>
+                  {currentSubject.isPrimary && (
+                    <>
+                      <span>•</span>
+                      <span className="bg-white/20 px-2 py-0.5 rounded-full text-xs font-medium">
+                        Primary Teacher
+                      </span>
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-center px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                <p className="text-2xl font-bold text-white">{currentSubject.grades.length}</p>
+                <p className="text-xs text-blue-100">Grades</p>
+              </div>
+              <div className="text-center px-4 py-2 bg-white/10 rounded-lg backdrop-blur-sm">
+                <p className="text-2xl font-bold text-white">{stats.totalLearners}</p>
+                <p className="text-xs text-blue-100">Learners</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Welcome Message */}
         <div className="mb-8 flex justify-between items-start">
           <div>
             <h1 className="text-3xl font-bold text-slate-900">
               Welcome, {teacher?.firstName || 'Teacher'}! 👋
             </h1>
             <p className="text-slate-500 mt-1">
-              Academic Year: {academicYear}
+              Academic Year: {academicYear || '2026'}
             </p>
           </div>
           <div className="flex gap-3">
@@ -155,17 +303,10 @@ export const TeacherDashboard = () => {
               <Plus className="w-4 h-4" />
               Add Teacher
             </Button>
-            <Button 
-              onClick={() => navigate('/materials/upload')}
-              className="flex items-center gap-2"
-            >
-              <Upload className="w-4 h-4" />
-              Upload Material
-            </Button>
           </div>
         </div>
 
-        {/* Stats Overview */}
+        {/* Stats Overview - Filtered by Subject */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardContent className="p-6">
@@ -175,7 +316,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Grades Teaching</p>
-                  <p className="text-2xl font-bold text-slate-900">{grades?.length || 0}</p>
+                  <p className="text-2xl font-bold text-slate-900">{currentSubject.grades.length}</p>
                 </div>
               </div>
             </CardContent>
@@ -188,8 +329,8 @@ export const TeacherDashboard = () => {
                   <BookOpen className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-sm text-slate-600">Subjects</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats?.totalSubjects || 0}</p>
+                  <p className="text-sm text-slate-600">Subject</p>
+                  <p className="text-2xl font-bold text-slate-900">{currentSubject.subjectCode}</p>
                 </div>
               </div>
             </CardContent>
@@ -203,7 +344,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Total Learners</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats?.totalStudents || 0}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.totalLearners}</p>
                 </div>
               </div>
             </CardContent>
@@ -217,7 +358,7 @@ export const TeacherDashboard = () => {
                 </div>
                 <div>
                   <p className="text-sm text-slate-600">Materials</p>
-                  <p className="text-2xl font-bold text-slate-900">{stats?.totalMaterials || 0}</p>
+                  <p className="text-2xl font-bold text-slate-900">{stats.totalMaterials}</p>
                 </div>
               </div>
             </CardContent>
@@ -225,77 +366,73 @@ export const TeacherDashboard = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Content - Grades & Subjects */}
+          {/* Main Content - My Learners Section */}
           <div className="lg:col-span-2 space-y-6">
+            {/* My Learners Card */}
             <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BookOpen className="w-5 h-5" />
-                  My Classes
-                </CardTitle>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    My Learners - {currentSubject.subjectName}
+                  </CardTitle>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Students enrolled in this subject
+                  </p>
+                </div>
+                <Badge variant="primary">{stats.totalLearners} Students</Badge>
               </CardHeader>
               <CardContent>
-                {!grades || grades.length === 0 ? (
+                {learnersLoading ? (
+                  <LoadingSpinner />
+                ) : learners.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    <p>No subjects assigned yet.</p>
-                    <p className="text-sm">Contact an administrator to get assigned to subjects.</p>
+                    <p>No learners enrolled in this subject yet.</p>
+                    <p className="text-sm">Learners will appear here once they enroll in {currentSubject.subjectName}.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {grades.map((grade) => (
-                      <div key={grade.gradeId} className="border rounded-lg overflow-hidden">
-                        {/* Grade Header */}
+                    {Object.values(learnersByGrade).map((gradeGroup) => (
+                      <div key={gradeGroup.gradeId} className="border rounded-lg overflow-hidden">
                         <button
-                          onClick={() => toggleGradeExpand(grade.gradeId)}
+                          onClick={() => toggleGradeExpand(gradeGroup.gradeId)}
                           className="w-full flex items-center justify-between p-4 bg-slate-50 hover:bg-slate-100 transition-colors"
                         >
                           <div className="flex items-center gap-3">
-                            {expandedGrades.has(grade.gradeId) ? (
+                            {expandedGrades.has(gradeGroup.gradeId) ? (
                               <ChevronDown className="w-5 h-5 text-slate-400" />
                             ) : (
                               <ChevronRight className="w-5 h-5 text-slate-400" />
                             )}
-                            <div>
-                              <h3 className="font-semibold text-slate-900">{grade.gradeName}</h3>
-                              <p className="text-sm text-slate-500">
-                                {grade.subjects?.length || 0} subjects
-                              </p>
-                            </div>
+                            <GraduationCap className="w-5 h-5 text-slate-500" />
+                            <h3 className="font-semibold text-slate-900">{gradeGroup.gradeName}</h3>
                           </div>
-                          <Badge variant="primary">{grade.gradeLevel}</Badge>
+                          <Badge variant="outline">{gradeGroup.learners.length} learners</Badge>
                         </button>
-
-                        {/* Subjects List */}
-                        {expandedGrades.has(grade.gradeId) && (
-                          <div className="p-4 space-y-3">
-                            {grade.subjects?.map((subject) => (
-                              <div
-                                key={subject.subjectId}
-                                className="flex items-center justify-between p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
+                        
+                        {expandedGrades.has(gradeGroup.gradeId) && (
+                          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {gradeGroup.learners.map((learner) => (
+                              <div 
+                                key={learner.learner_id || learner.id}
+                                className="flex items-center gap-3 p-3 bg-white border rounded-lg hover:shadow-sm transition-shadow"
                               >
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
-                                    {subject.code?.replace(/-.*$/, '') || 'S'}
-                                  </div>
-                                  <div>
-                                    <h4 className="font-medium text-slate-900">{subject.name}</h4>
-                                    <p className="text-sm text-slate-500">{subject.department}</p>
-                                  </div>
+                                <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-semibold">
+                                  {(learner.first_name || learner.firstName || 'S')[0]}
                                 </div>
-                                <div className="flex items-center gap-3">
-                                  <div className="text-right">
-                                    {subject.isPrimary && (
-                                      <Badge variant="success" className="text-xs">Primary</Badge>
-                                    )}
-                                  </div>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => navigate(`/materials/upload?subject=${subject.subjectId}&grade=${grade.gradeId}`)}
-                                  >
-                                    <Upload className="w-4 h-4" />
-                                  </Button>
+                                <div className="flex-1 min-w-0">
+                                  <h4 className="font-medium text-slate-900 truncate">
+                                    {learner.first_name || learner.firstName} {learner.last_name || learner.lastName}
+                                  </h4>
+                                  <p className="text-sm text-slate-500 truncate">{learner.email}</p>
                                 </div>
+                                <Button 
+                                  size="sm" 
+                                  variant="ghost"
+                                  onClick={() => navigate(`/teacher/learners/${learner.learner_id || learner.id}?subjectId=${currentSubject.subjectId}`)}
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </Button>
                               </div>
                             ))}
                           </div>
@@ -307,36 +444,43 @@ export const TeacherDashboard = () => {
               </CardContent>
             </Card>
 
-            {/* Recent Activity (renamed from recentMaterials to match backend) */}
+            {/* Recent Materials - Visible to Students */}
             <Card>
               <CardHeader className="flex flex-row items-center justify-between">
-                <CardTitle className="flex items-center gap-2">
-                  <FolderOpen className="w-5 h-5" />
-                  Recent Activity
-                </CardTitle>
-                <Button 
-                  variant="ghost" 
-                  size="sm"
-                  onClick={() => navigate('/materials')}
-                >
-                  View All
-                </Button>
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <FolderOpen className="w-5 h-5" />
+                    Recent Materials - {currentSubject.subjectName}
+                  </CardTitle>
+                  <p className="text-sm text-slate-500 mt-1">
+                    Recently uploaded for this subject
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Button 
+                    variant="ghost" 
+                    size="sm"
+                    onClick={() => navigate('/materials')}
+                  >
+                    View All
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
-                {!recentActivity || recentActivity.length === 0 ? (
+                {materials.length === 0 ? (
                   <div className="text-center py-8 text-slate-500">
-                    <p>No materials uploaded yet.</p>
+                    <p>No materials uploaded for this subject yet.</p>
                     <Button 
                       variant="outline" 
                       className="mt-4"
-                      onClick={() => navigate('/materials/upload')}
+                      onClick={() => navigate(`/materials/upload?subjectId=${currentSubject.subjectId}`)}
                     >
-                      Upload Your First Material
+                      Upload First Material
                     </Button>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {recentActivity.map((activity) => (
+                    {materials.slice(0, 5).map((activity) => (
                       <div
                         key={activity.id}
                         className="flex items-center justify-between p-3 border rounded-lg hover:bg-slate-50 transition-colors"
@@ -346,9 +490,21 @@ export const TeacherDashboard = () => {
                           <div>
                             <h4 className="font-medium text-slate-900">{activity.title}</h4>
                             <p className="text-sm text-slate-500">
-                              {activity.gradeName} • {activity.subjectName} • {formatDate(activity.createdAt)}
+                              {activity.gradeName} • {formatDate(activity.createdAt)}
+                            </p>
+                            <p className="text-xs text-green-600 mt-1">
+                              ✓ Visible to {activity.visibleToLearners || activity.studentCount || 'all'} learners
                             </p>
                           </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => navigate(`/materials/${activity.id}`)}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         </div>
                       </div>
                     ))}
@@ -358,8 +514,49 @@ export const TeacherDashboard = () => {
             </Card>
           </div>
 
-          {/* Sidebar - Activity & Quick Actions */}
+          {/* Sidebar - Quick Actions & Info */}
           <div className="space-y-6">
+            {/* Subject Info Card */}
+            <Card className="bg-gradient-to-br from-slate-50 to-white">
+              <CardHeader>
+                <CardTitle className="text-base">Subject Information</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="p-3 bg-white rounded-lg border">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-1">Subject Code</p>
+                  <p className="font-semibold text-slate-900">{currentSubject.subjectCode}</p>
+                </div>
+                
+                <div className="p-3 bg-white rounded-lg border">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-1">Department</p>
+                  <p className="font-semibold text-slate-900">{currentSubject.department}</p>
+                </div>
+
+                <div className="p-3 bg-white rounded-lg border">
+                  <p className="text-xs text-slate-500 uppercase font-medium mb-2">Teaching Grades</p>
+                  <div className="flex flex-wrap gap-2">
+                    {currentSubject.grades.map(grade => (
+                      <Badge key={grade.gradeId} variant="outline">
+                        {grade.gradeName}
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+
+                {currentSubject.isPrimary && (
+                  <div className="p-3 bg-green-50 rounded-lg border border-green-100">
+                    <p className="text-sm text-green-800 font-medium flex items-center gap-2">
+                      <CheckCircle className="w-4 h-4" />
+                      Primary Subject Teacher
+                    </p>
+                    <p className="text-xs text-green-600 mt-1">
+                      You have primary responsibility for this subject.
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
             {/* Quick Actions */}
             <Card>
               <CardHeader>
@@ -368,7 +565,7 @@ export const TeacherDashboard = () => {
               <CardContent className="space-y-3">
                 <Button 
                   className="w-full justify-start gap-2"
-                  onClick={() => navigate('/materials/upload')}
+                  onClick={() => navigate(`/materials/upload?subjectId=${currentSubject.subjectId}`)}
                 >
                   <Upload className="w-4 h-4" />
                   Upload Material
@@ -376,25 +573,89 @@ export const TeacherDashboard = () => {
                 <Button 
                   variant="outline"
                   className="w-full justify-start gap-2"
-                  onClick={() => navigate('/teacher/assignments')}
+                  onClick={() => navigate(`/teacher/assignments/create?subjectId=${currentSubject.subjectId}`)}
                 >
                   <FileText className="w-4 h-4" />
                   Create Assignment
                 </Button>
-                {/* ADDED: My Learners Button */}
                 <Button 
                   variant="outline"
                   className="w-full justify-start gap-2"
                   onClick={() => navigate('/teacher/learners')}
                 >
                   <Users className="w-4 h-4" />
-                  My Learners
+                  View All Learners
                 </Button>
-                {/* END ADDED */}
               </CardContent>
             </Card>
 
-            {/* Recent Activity - hidden if no data or use stats */}
+            {/* Other Subjects */}
+            {availableSubjects.length > 1 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-base">Your Other Subjects</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {availableSubjects
+                      .filter(s => s.subjectId !== currentSubject.subjectId)
+                      .map(subject => (
+                        <button
+                          key={subject.subjectId}
+                          onClick={() => selectSubject(subject)}
+                          className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-slate-50 transition-colors text-left border"
+                        >
+                          <div className="w-8 h-8 rounded bg-slate-100 flex items-center justify-center text-slate-600 font-semibold text-xs">
+                            {subject.subjectCode?.slice(0, 2)}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-900 text-sm truncate">{subject.subjectName}</p>
+                            <p className="text-xs text-slate-500">{subject.grades.length} grade(s)</p>
+                          </div>
+                        </button>
+                      ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Material Visibility Info */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Eye className="w-5 h-5" />
+                  Material Visibility
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3 text-sm">
+                  <p className="text-slate-600">
+                    When you upload materials, they are automatically visible to:
+                  </p>
+                  <ul className="space-y-2 text-slate-600">
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                      <span>All learners in {currentSubject.subjectName}</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                      <span>Learners taking this specific subject</span>
+                    </li>
+                    <li className="flex items-start gap-2">
+                      <CheckCircle className="w-4 h-4 text-green-500 mt-0.5" />
+                      <span>Active enrollments only</span>
+                    </li>
+                  </ul>
+                  <div className="mt-4 p-3 bg-blue-50 rounded-lg">
+                    <p className="text-blue-800 text-xs">
+                      <strong>Tip:</strong> Materials are instantly accessible to your {stats.totalLearners} learners upon upload.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quick Stats */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -406,11 +667,15 @@ export const TeacherDashboard = () => {
                 <div className="space-y-3">
                   <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
                     <span className="text-sm text-slate-600">Recent Uploads (7 days)</span>
-                    <span className="font-semibold text-slate-900">{stats?.recentUploads || 0}</span>
+                    <span className="font-semibold text-slate-900">{stats.recentUploads}</span>
                   </div>
                   <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
-                    <span className="text-sm text-slate-600">Pending to Grade</span>
-                    <span className="font-semibold text-slate-900">{stats?.pendingGrading || 0}</span>
+                    <span className="text-sm text-slate-600">Materials Visible</span>
+                    <span className="font-semibold text-slate-900">{stats.totalMaterials}</span>
+                  </div>
+                  <div className="flex justify-between items-center p-3 bg-slate-50 rounded-lg">
+                    <span className="text-sm text-slate-600">Learners with Access</span>
+                    <span className="font-semibold text-slate-900">{stats.totalLearners}</span>
                   </div>
                 </div>
               </CardContent>

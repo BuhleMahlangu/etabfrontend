@@ -6,6 +6,7 @@ import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
 import { Button } from './components/common/Button';
+import { SubjectProvider } from './components/dashboard/SubjectContext';
 
 // Pages
 import { Login } from './pages/Login';
@@ -16,7 +17,7 @@ import { Materials } from './pages/Materials';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
-import { TeacherLearners } from './pages/TeacherLearners'; // <-- ADD THIS IMPORT
+import { TeacherLearners } from './pages/TeacherLearners';
 import { AdminLogin } from './pages/AdminLogin';
 import { PendingTeachers } from './pages/PendingTeachers';
 
@@ -83,6 +84,17 @@ function AuthenticatedLayout({ children }) {
         </div>
       </main>
     </div>
+  );
+}
+
+// Teacher layout with SubjectProvider
+function TeacherLayout({ children }) {
+  return (
+    <SubjectProvider>
+      <AuthenticatedLayout>
+        {children}
+      </AuthenticatedLayout>
+    </SubjectProvider>
   );
 }
 
@@ -188,26 +200,39 @@ function App() {
               }
             />
             
-            {/* Teacher Routes */}
+            {/* Teacher Routes - Wrapped with SubjectProvider */}
             <Route
               path="/teacher/dashboard"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <TeacherDashboard />
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
             
-            {/* ADD THIS NEW ROUTE - Teacher Learners */}
             <Route
               path="/teacher/learners"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <TeacherLearners />
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/learners/:id"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Learner Detail</h2>
+                      <p className="text-slate-500">Learner detail view coming soon...</p>
+                    </div>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -228,9 +253,9 @@ function App() {
               path="/teacher/upload"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <Materials />
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -239,9 +264,20 @@ function App() {
               path="/teacher/materials"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <Materials />
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/materials/upload"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <Materials />
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -250,12 +286,26 @@ function App() {
               path="/teacher/assignments"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <div className="p-8 text-center">
                       <h2 className="text-2xl font-bold text-slate-900 mb-4">Assignments</h2>
                       <p className="text-slate-500">Assignment management coming soon...</p>
                     </div>
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/assignments/create"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Create Assignment</h2>
+                      <p className="text-slate-500">Assignment creation coming soon...</p>
+                    </div>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -264,12 +314,26 @@ function App() {
               path="/teacher/grade"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <div className="p-8 text-center">
                       <h2 className="text-2xl font-bold text-slate-900 mb-4">Grade Submissions</h2>
                       <p className="text-slate-500">Grading interface coming soon...</p>
                     </div>
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/grade/:gradeId/learners"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Grade Learners</h2>
+                      <p className="text-slate-500">Grade learners list coming soon...</p>
+                    </div>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -278,12 +342,54 @@ function App() {
               path="/teacher/students"
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
-                  <AuthenticatedLayout>
+                  <TeacherLayout>
                     <div className="p-8 text-center">
                       <h2 className="text-2xl font-bold text-slate-900 mb-4">My Students</h2>
                       <p className="text-slate-500">Student management coming soon...</p>
                     </div>
-                  </AuthenticatedLayout>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/announcements"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Announcements</h2>
+                      <p className="text-slate-500">Announcements coming soon...</p>
+                    </div>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/analytics"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Analytics</h2>
+                      <p className="text-slate-500">Analytics dashboard coming soon...</p>
+                    </div>
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/profile"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <div className="p-8 text-center">
+                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Teacher Profile</h2>
+                      <p className="text-slate-500">Profile page coming soon...</p>
+                    </div>
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
