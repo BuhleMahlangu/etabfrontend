@@ -14,6 +14,10 @@ import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { SubjectBrowser } from './components/SubjectBrowser';
 import { Materials } from './pages/Materials';
+import { LearnerMaterials } from './pages/LearnerMaterials';
+import { LearnerQuizzes } from './pages/LearnerQuizzes';
+import { TeacherAnnouncements } from './pages/TeacherAnnouncements';
+import { TeacherQuizzes } from './pages/TeacherQuizzes';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
@@ -200,6 +204,44 @@ function App() {
               }
             />
             
+            {/* Learner Materials - with FET Phase History */}
+            <Route
+              path="/learner/materials"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <LearnerMaterials />
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/learner/materials/:subjectId"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <LearnerMaterials />
+                </PrivateRoute>
+              }
+            />
+
+            {/* Learner Quizzes */}
+            <Route
+              path="/learner/quizzes"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <LearnerQuizzes />
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/learner/quizzes/subject/:subjectId"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <LearnerQuizzes />
+                </PrivateRoute>
+              }
+            />
+            
             {/* Teacher Routes - Wrapped with SubjectProvider */}
             <Route
               path="/teacher/dashboard"
@@ -357,10 +399,18 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <TeacherLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Announcements</h2>
-                      <p className="text-slate-500">Announcements coming soon...</p>
-                    </div>
+                    <TeacherAnnouncements />
+                  </TeacherLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            <Route
+              path="/teacher/quizzes"
+              element={
+                <PrivateRoute allowedRoles={['teacher', 'admin']}>
+                  <TeacherLayout>
+                    <TeacherQuizzes />
                   </TeacherLayout>
                 </PrivateRoute>
               }

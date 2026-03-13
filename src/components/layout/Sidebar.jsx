@@ -12,7 +12,9 @@ import {
   LogOut,
   GraduationCap,
   Users,
-  Upload
+  Upload,
+  Megaphone,
+  HelpCircle
 } from 'lucide-react';
 
 export function Sidebar() {
@@ -27,6 +29,7 @@ export function Sidebar() {
       return [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/subjects', icon: BookOpen, label: 'My Subjects' },
+        { to: '/learner/quizzes', icon: HelpCircle, label: 'My Quizzes' },
         { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
         { to: '/notifications', icon: Bell, label: 'Notifications' },
         { to: '/materials', icon: FileText, label: 'All Materials' },
@@ -41,6 +44,8 @@ export function Sidebar() {
         { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/teacher/dashboard', icon: GraduationCap, label: 'Teacher Dashboard' },
         { to: '/teacher/upload', icon: Upload, label: 'Upload Materials' },
+        { to: '/teacher/announcements', icon: Megaphone, label: 'Announcements' },
+        { to: '/teacher/quizzes', icon: HelpCircle, label: 'Quizzes' },
         { to: '/teacher/assignments', icon: FileText, label: 'Assignments' },
         { to: '/teacher/students', icon: Users, label: 'My Students' },
         { to: '/deadlines', icon: Calendar, label: 'Deadlines' },

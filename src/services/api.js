@@ -72,6 +72,7 @@ export const subjectAPI = {
 export const materialAPI = {
   getAll: () => api.get('/materials'),
   getById: (id) => api.get(`/materials/${id}`),
+  getBySubject: (subjectId) => api.get(`/materials/subject/${subjectId}`),
   upload: (formData) => api.post('/materials', formData, {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
@@ -89,8 +90,38 @@ export const notificationAPI = {
   markAllAsRead: () => api.put('/notifications/read-all'),
 };
 
+export const announcementAPI = {
+  getAll: (params) => api.get('/announcements', { params }),
+  getMyAnnouncements: () => api.get('/announcements/my-announcements'),
+  getRecent: (limit) => api.get(`/announcements/recent?limit=${limit || 5}`),
+  getById: (id) => api.get(`/announcements/${id}`),
+  create: (data) => api.post('/announcements', data),
+  update: (id, data) => api.put(`/announcements/${id}`, data),
+  delete: (id) => api.delete(`/announcements/${id}`),
+};
+
+export const quizAPI = {
+  getAll: (params) => api.get('/quizzes', { params }),
+  getById: (id) => api.get(`/quizzes/${id}`),
+  create: (data) => api.post('/quizzes', data),
+  update: (id, data) => api.put(`/quizzes/${id}`, data),
+  delete: (id) => api.delete(`/quizzes/${id}`),
+  addQuestion: (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data),
+  startAttempt: (quizId) => api.post(`/quizzes/${quizId}/start`),
+  saveAnswer: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/save`, data),
+  submitQuiz: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/submit`, data),
+  getMyResults: (quizId) => api.get(`/quizzes/${quizId}/my-results`),
+  getStatistics: (quizId) => api.get(`/quizzes/${quizId}/statistics`),
+};
+
+export const teacherAPI = {
+  getMyAssignments: () => api.get('/teachers/my-assignments'),
+  getDashboard: () => api.get('/teachers/dashboard'),
+};
+
 export const enrollmentAPI = {
   getMyReport: () => api.get('/enrollments/my-report'),
+  getHistory: (phase) => api.get(`/enrollments/history${phase ? `?phase=${phase}` : ''}`),
   updateMarks: (enrollmentId, marks) => api.put(`/enrollments/${enrollmentId}/marks`, marks),
 };
 
