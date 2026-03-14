@@ -1,6 +1,7 @@
 import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SettingsProvider } from './context/SettingsContext';
 import { ToastProvider } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
@@ -27,6 +28,8 @@ import { TeacherRegister } from './pages/TeacherRegister';
 import { TeacherLearners } from './pages/TeacherLearners';
 import { AdminLogin } from './pages/AdminLogin';
 import { PendingTeachers } from './pages/PendingTeachers';
+import { Settings } from './pages/Settings';
+import { Deadlines } from './pages/Deadlines';
 
 // Role-based protected route
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -130,9 +133,10 @@ function App() {
   return (
     <ToastProvider>
       <AuthProvider>
-        <div className="min-h-screen bg-slate-50">
-          <Navbar />
-          <Routes>
+        <SettingsProvider>
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
+            <Navbar />
+            <Routes>
             {/* Public Routes - Regular Users */}
             <Route 
               path="/login" 
@@ -251,6 +255,30 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['learner', 'admin']}>
                   <LearnerAssignments />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Settings - Available to all roles */}
+            <Route
+              path="/settings"
+              element={
+                <PrivateRoute>
+                  <AuthenticatedLayout>
+                    <Settings />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+
+            {/* Deadlines - Shows assignments and quizzes */}
+            <Route
+              path="/deadlines"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <AuthenticatedLayout>
+                    <Deadlines />
+                  </AuthenticatedLayout>
                 </PrivateRoute>
               }
             />
@@ -562,7 +590,8 @@ function App() {
               } 
             />
           </Routes>
-        </div>
+          </div>
+        </SettingsProvider>
       </AuthProvider>
     </ToastProvider>
   );

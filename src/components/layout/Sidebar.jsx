@@ -8,7 +8,7 @@ import {
   Bell, 
   FileText, 
   TrendingUp, 
-  Settings,
+  Settings as SettingsIcon,
   LogOut,
   GraduationCap,
   Users,
@@ -31,11 +31,11 @@ export function Sidebar() {
         { to: '/subjects', icon: BookOpen, label: 'My Subjects' },
         { to: '/learner/assignments', icon: FileText, label: 'My Assignments' },
         { to: '/learner/quizzes', icon: HelpCircle, label: 'My Quizzes' },
-        { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
+        { to: '/deadlines', icon: Calendar, label: 'My Deadlines' },
         { to: '/notifications', icon: Bell, label: 'Notifications' },
         { to: '/materials', icon: FileText, label: 'All Materials' },
         { to: '/progress', icon: TrendingUp, label: 'My Progress' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
+        { to: '/settings', icon: SettingsIcon, label: 'Settings' },
       ];
     }
 
@@ -51,7 +51,7 @@ export function Sidebar() {
         { to: '/teacher/students', icon: Users, label: 'My Students' },
         { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
         { to: '/notifications', icon: Bell, label: 'Notifications' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
+        { to: '/settings', icon: SettingsIcon, label: 'Settings' },
       ];
     }
 
@@ -63,7 +63,7 @@ export function Sidebar() {
         { to: '/admin/users', icon: Users, label: 'Manage Users' },
         { to: '/admin/subjects', icon: BookOpen, label: 'Manage Subjects' },
         { to: '/notifications', icon: Bell, label: 'Notifications' },
-        { to: '/settings', icon: Settings, label: 'Settings' },
+        { to: '/settings', icon: SettingsIcon, label: 'Settings' },
       ];
     }
 
