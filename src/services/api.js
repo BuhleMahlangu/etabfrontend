@@ -100,6 +100,21 @@ export const announcementAPI = {
   delete: (id) => api.delete(`/announcements/${id}`),
 };
 
+export const assignmentAPI = {
+  getAll: (params) => api.get('/assignments', { params }),
+  getMyAssignments: (status) => api.get('/assignments/my-assignments', { params: status ? { status } : {} }),
+  getUpcomingDeadlines: (limit) => api.get(`/assignments/upcoming-deadlines?limit=${limit || 5}`),
+  getById: (id) => api.get(`/assignments/${id}`),
+  getSubmissions: (assignmentId) => api.get(`/assignments/${assignmentId}/submissions`),
+  create: (data) => api.post('/assignments', data),
+  update: (id, data) => api.put(`/assignments/${id}`, data),
+  delete: (id) => api.delete(`/assignments/${id}`),
+  submit: (assignmentId, formData) => api.post(`/assignments/${assignmentId}/submit`, formData, {
+    headers: { 'Content-Type': 'multipart/form-data' }
+  }),
+  gradeSubmission: (submissionId, data) => api.post(`/assignments/submissions/${submissionId}/grade`, data),
+};
+
 export const quizAPI = {
   getAll: (params) => api.get('/quizzes', { params }),
   getById: (id) => api.get(`/quizzes/${id}`),
@@ -123,6 +138,12 @@ export const enrollmentAPI = {
   getMyReport: () => api.get('/enrollments/my-report'),
   getHistory: (phase) => api.get(`/enrollments/history${phase ? `?phase=${phase}` : ''}`),
   updateMarks: (enrollmentId, marks) => api.put(`/enrollments/${enrollmentId}/marks`, marks),
+};
+
+export const progressAPI = {
+  getMyProgress: () => api.get('/progress/my-progress'),
+  getSubjectProgress: (subjectId) => api.get(`/progress/subject/${subjectId}`),
+  getProgressHistory: (months = 6) => api.get(`/progress/history?months=${months}`),
 };
 
 export default api;

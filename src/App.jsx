@@ -18,6 +18,9 @@ import { LearnerMaterials } from './pages/LearnerMaterials';
 import { LearnerQuizzes } from './pages/LearnerQuizzes';
 import { TeacherAnnouncements } from './pages/TeacherAnnouncements';
 import { TeacherQuizzes } from './pages/TeacherQuizzes';
+import { TeacherAssignments } from './pages/TeacherAssignments';
+import { LearnerAssignments } from './pages/LearnerAssignments';
+import { LearnerProgress } from './pages/LearnerProgress';
 import { AdminDashboard } from './pages/AdminDashboard';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
@@ -241,6 +244,28 @@ function App() {
                 </PrivateRoute>
               }
             />
+
+            {/* Learner Assignments */}
+            <Route
+              path="/learner/assignments"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <LearnerAssignments />
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Learner Progress */}
+            <Route
+              path="/progress"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'admin']}>
+                  <AuthenticatedLayout>
+                    <LearnerProgress />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
             
             {/* Teacher Routes - Wrapped with SubjectProvider */}
             <Route
@@ -329,10 +354,7 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['teacher', 'admin']}>
                   <TeacherLayout>
-                    <div className="p-8 text-center">
-                      <h2 className="text-2xl font-bold text-slate-900 mb-4">Assignments</h2>
-                      <p className="text-slate-500">Assignment management coming soon...</p>
-                    </div>
+                    <TeacherAssignments />
                   </TeacherLayout>
                 </PrivateRoute>
               }

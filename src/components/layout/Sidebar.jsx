@@ -29,6 +29,7 @@ export function Sidebar() {
       return [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
         { to: '/subjects', icon: BookOpen, label: 'My Subjects' },
+        { to: '/learner/assignments', icon: FileText, label: 'My Assignments' },
         { to: '/learner/quizzes', icon: HelpCircle, label: 'My Quizzes' },
         { to: '/deadlines', icon: Calendar, label: 'Deadlines' },
         { to: '/notifications', icon: Bell, label: 'Notifications' },
