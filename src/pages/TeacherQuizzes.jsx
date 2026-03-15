@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../components/common/Toast';
 import { quizAPI, teacherAPI } from '../services/api';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
@@ -7,7 +8,7 @@ import { Input } from '../components/common/Input';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
-import { HelpCircle, Plus, Trash2, Edit2, Play, BarChart2, Clock, CheckCircle, X } from 'lucide-react';
+import { HelpCircle, Plus, Trash2, Edit2, Play, BarChart2, Clock, CheckCircle, X, Users, RotateCcw } from 'lucide-react';
 
 const QUESTION_TYPES = [
   { value: 'multiple_choice', label: 'Multiple Choice' },
@@ -17,14 +18,17 @@ const QUESTION_TYPES = [
 
 export function TeacherQuizzes() {
   const { user } = useAuth();
+  const { addToast } = useToast();
   const [quizzes, setQuizzes] = useState([]);
   const [subjects, setSubjects] = useState([]);
   const [grades, setGrades] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStatsModal, setShowStatsModal] = useState(false);
+  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
   const [selectedQuiz, setSelectedQuiz] = useState(null);
   const [stats, setStats] = useState(null);
+  const [attempts, setAttempts] = useState([]);
   
   // Quiz form state
   const [quizForm, setQuizForm] = useState({
@@ -79,9 +83,8 @@ export function TeacherQuizzes() {
           grade.subjects?.forEach(subject => {
             allSubjects.push({
               id: subject.subjectId,
-              name: subject.name,
-              code: subject.code,
-              department: subject.department,
+              name: subject.subjectName,
+              code: subject.subjectCode,
               gradeName: grade.gradeName,
               gradeId: grade.gradeId
             });
@@ -115,6 +118,33 @@ export function TeacherQuizzes() {
       }
     } catch (error) {
       console.error('Failed to fetch statistics:', error);
+    }
+  };
+
+  const fetchQuizAttempts = async (quizId) => {
+    try {
+      const response = await quizAPI.getAttempts(quizId);
+      if (response.success) {
+        setAttempts(response.data);
+        const quiz = quizzes.find(q => q.id === quizId);
+        setSelectedQuiz(quiz);
+        setShowAttemptsModal(true);
+      }
+    } catch (error) {
+      console.error('Failed to fetch attempts:', error);
+    }
+  };
+
+  const handleResetAttempt = async (quizId, learnerId, learnerName) => {
+    if (!confirm(`Reset attempt for ${learnerName}? This will allow them to retake the quiz.`)) return;
+    
+    try {
+      await quizAPI.resetStudentAttempt(quizId, learnerId);
+      addToast(`Attempt reset for ${learnerName}`, 'success');
+      fetchQuizAttempts(quizId);
+    } catch (error) {
+      console.error('Failed to reset attempt:', error);
+      addToast('Failed to reset attempt', 'error');
     }
   };
 
@@ -152,10 +182,19 @@ export function TeacherQuizzes() {
 
   const handlePublish = async (quizId) => {
     try {
-      await quizAPI.update(quizId, { isPublished: true, status: 'published' });
+      await quizAPI.publish(quizId);
       fetchQuizzes();
     } catch (error) {
       console.error('Failed to publish quiz:', error);
+    }
+  };
+
+  const handleUnpublish = async (quizId) => {
+    try {
+      await quizAPI.unpublish(quizId);
+      fetchQuizzes();
+    } catch (error) {
+      console.error('Failed to unpublish quiz:', error);
     }
   };
 
@@ -286,6 +325,14 @@ export function TeacherQuizzes() {
                   {quiz.status === 'published' ? 'Published' : 'Draft'}
                 </Badge>
                 <div className="flex items-center gap-1">
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    onClick={() => fetchQuizAttempts(quiz.id)}
+                    title="View Attempts"
+                  >
+                    <Users className="w-4 h-4" />
+                  </Button>
                   <Button 
                     variant="ghost" 
                     size="sm" 
@@ -656,6 +703,52 @@ export function TeacherQuizzes() {
         ) : (
           <div className="flex justify-center py-8">
             <LoadingSpinner />
+          </div>
+        )}
+      </Modal>
+
+      {/* Attempts Modal */}
+      <Modal
+        isOpen={showAttemptsModal}
+        onClose={() => setShowAttemptsModal(false)}
+        title={`Student Attempts - ${selectedQuiz?.title || ''}`}
+        size="lg"
+      >
+        {attempts.length === 0 ? (
+          <div className="text-center py-8 text-slate-500">
+            <p>No attempts yet</p>
+          </div>
+        ) : (
+          <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+            {attempts.map((attempt) => (
+              <div key={attempt.id} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="font-medium text-slate-900">
+                    {attempt.first_name} {attempt.last_name}
+                  </p>
+                  <p className="text-sm text-slate-500">{attempt.email}</p>
+                  <div className="flex items-center gap-3 mt-1 text-xs">
+                    <span className={`px-2 py-0.5 rounded ${
+                      attempt.passed ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                    }`}>
+                      {attempt.percentage_score}%
+                    </span>
+                    <span className="text-slate-400">
+                      {new Date(attempt.submitted_at).toLocaleDateString()}
+                    </span>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleResetAttempt(selectedQuiz.id, attempt.learner_id, `${attempt.first_name} ${attempt.last_name}`)}
+                  className="text-orange-600 border-orange-300 hover:bg-orange-50"
+                >
+                  <RotateCcw className="w-4 h-4 mr-1" />
+                  Reset
+                </Button>
+              </div>
+            ))}
           </div>
         )}
       </Modal>

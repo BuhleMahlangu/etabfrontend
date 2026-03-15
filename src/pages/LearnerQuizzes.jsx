@@ -66,7 +66,7 @@ export function LearnerQuizzes() {
           ...response.data
         });
         setAnswers(response.data.answers || {});
-        setTimeRemaining(response.data.timeRemaining * 60); // Convert to seconds
+        setTimeRemaining(response.data.timeRemaining); // Already in seconds from backend
         setCurrentQuestionIndex(0);
         setShowResults(false);
         setResults(null);
@@ -82,7 +82,12 @@ export function LearnerQuizzes() {
     setAnswers(newAnswers);
 
     try {
-      await quizAPI.saveAnswer(attempt.id, { questionId, answer });
+      // Send answer as text for all question types (simplified format)
+      await quizAPI.saveAnswer(attempt.id, { 
+        questionId, 
+        answer: answer || '',
+        selectedOptions: answer ? [answer] : [] // For backward compatibility
+      });
     } catch (error) {
       console.error('Failed to save answer:', error);
     }
@@ -93,7 +98,14 @@ export function LearnerQuizzes() {
     setSubmitting(true);
 
     try {
-      const response = await quizAPI.submitQuiz(attempt.id, { answers });
+      // Convert answers object to array format expected by backend
+      const answersArray = Object.entries(answers).map(([questionId, answer]) => ({
+        questionId,
+        answer: answer || '',
+        selectedOptions: answer ? [answer] : []
+      }));
+      
+      const response = await quizAPI.submitQuiz(attempt.id, { answers: answersArray });
       if (response.success) {
         setResults(response.data);
         setShowResults(true);
@@ -169,7 +181,29 @@ export function LearnerQuizzes() {
                 className="w-full px-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500"
                 placeholder="Type your answer here..."
               />
+            ) : currentQuestion.question_type === 'true_false' ? (
+              // True/False - store and compare the actual text
+              ['True', 'False'].map((option) => (
+                <label
+                  key={option}
+                  className={`flex items-center gap-3 p-4 border rounded-lg cursor-pointer transition-colors ${
+                    answers[currentQuestion.id] === option
+                      ? 'border-blue-500 bg-blue-50'
+                      : 'border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name={`question-${currentQuestion.id}`}
+                    checked={answers[currentQuestion.id] === option}
+                    onChange={() => saveAnswer(currentQuestion.id, option)}
+                    className="w-4 h-4 text-blue-600"
+                  />
+                  <span className="flex-1">{option}</span>
+                </label>
+              ))
             ) : (
+              // Multiple Choice - store and compare the actual option TEXT
               currentQuestion.options?.map((option, idx) => (
                 <label
                   key={idx}

@@ -1,11 +1,14 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
+import './styles/animations.css';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { SettingsProvider } from './context/SettingsContext';
 import { ToastProvider } from './components/common/Toast';
 import { Navbar } from './components/layout/Navbar';
 import { Sidebar } from './components/layout/Sidebar';
 import { LoadingSpinner } from './components/common/LoadingSpinner';
+import { LoadingScreen } from './components/common/LoadingScreen';
+import { PageTransition, ScrollToTop } from './components/common/PageTransition';
 import { Button } from './components/common/Button';
 import { SubjectProvider } from './components/dashboard/SubjectContext';
 
@@ -23,6 +26,8 @@ import { TeacherAssignments } from './pages/TeacherAssignments';
 import { LearnerAssignments } from './pages/LearnerAssignments';
 import { LearnerProgress } from './pages/LearnerProgress';
 import { AdminDashboard } from './pages/AdminDashboard';
+import { AdminUsers } from './pages/AdminUsers';
+import { AdminSubjects } from './pages/AdminSubjects';
 import { TeacherDashboard } from './pages/TeacherDashboard';
 import { TeacherRegister } from './pages/TeacherRegister';
 import { TeacherLearners } from './pages/TeacherLearners';
@@ -30,6 +35,12 @@ import { AdminLogin } from './pages/AdminLogin';
 import { PendingTeachers } from './pages/PendingTeachers';
 import { Settings } from './pages/Settings';
 import { Deadlines } from './pages/Deadlines';
+import { Notifications } from './pages/Notifications';
+import { AllMaterials } from './pages/AllMaterials';
+import { ContactAdmin } from './pages/ContactAdmin';
+import { AdminSupport } from './pages/AdminSupport';
+import { LearnerMessages } from './pages/LearnerMessages';
+import { TeacherMessages } from './pages/TeacherMessages';
 
 // Role-based protected route
 function PrivateRoute({ children, allowedRoles = [] }) {
@@ -134,8 +145,10 @@ function App() {
     <ToastProvider>
       <AuthProvider>
         <SettingsProvider>
-          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors">
+          <div className="min-h-screen bg-slate-50 dark:bg-slate-900 transition-colors duration-300">
+            <ScrollToTop />
             <Navbar />
+            <PageTransition>
             <Routes>
             {/* Public Routes - Regular Users */}
             <Route 
@@ -271,6 +284,18 @@ function App() {
               }
             />
 
+            {/* Notifications */}
+            <Route
+              path="/notifications"
+              element={
+                <PrivateRoute>
+                  <AuthenticatedLayout>
+                    <Notifications />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+
             {/* Deadlines - Shows assignments and quizzes */}
             <Route
               path="/deadlines"
@@ -291,6 +316,42 @@ function App() {
                   <AuthenticatedLayout>
                     <LearnerProgress />
                   </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Contact Admin - for both learners and teachers */}
+            <Route
+              path="/contact-admin"
+              element={
+                <PrivateRoute allowedRoles={['learner', 'teacher']}>
+                  <AuthenticatedLayout>
+                    <ContactAdmin />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* My Messages - for learners */}
+            <Route
+              path="/my-messages"
+              element={
+                <PrivateRoute allowedRoles={['learner']}>
+                  <AuthenticatedLayout>
+                    <LearnerMessages />
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Teacher Messages */}
+            <Route
+              path="/teacher/messages"
+              element={
+                <PrivateRoute allowedRoles={['teacher']}>
+                  <TeacherLayout>
+                    <TeacherMessages />
+                  </TeacherLayout>
                 </PrivateRoute>
               }
             />
@@ -522,7 +583,7 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
-                    <AdminDashboard />
+                    <AdminUsers />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -533,7 +594,7 @@ function App() {
               element={
                 <PrivateRoute allowedRoles={['admin']}>
                   <AuthenticatedLayout>
-                    <AdminDashboard />
+                    <AdminSubjects />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -556,6 +617,18 @@ function App() {
                       </div>
                       <p className="text-slate-500">Teacher management interface. New teacher signups require approval.</p>
                     </div>
+                  </AuthenticatedLayout>
+                </PrivateRoute>
+              }
+            />
+            
+            {/* Admin Support Messages */}
+            <Route
+              path="/admin/support"
+              element={
+                <PrivateRoute allowedRoles={['admin']}>
+                  <AuthenticatedLayout>
+                    <AdminSupport />
                   </AuthenticatedLayout>
                 </PrivateRoute>
               }
@@ -590,6 +663,7 @@ function App() {
               } 
             />
           </Routes>
+            </PageTransition>
           </div>
         </SettingsProvider>
       </AuthProvider>

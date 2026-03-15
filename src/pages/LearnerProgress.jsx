@@ -10,9 +10,13 @@ import {
   BarChart3,
   Calendar,
   ArrowLeft,
-  RefreshCw
+  RefreshCw,
+  CheckCircle,
+  XCircle,
+  Clock,
+  Trophy
 } from 'lucide-react';
-import { progressAPI } from '../services/api';
+import { progressAPI, quizAPI } from '../services/api';
 
 export const LearnerProgress = () => {
   const navigate = useNavigate();
@@ -21,9 +25,12 @@ export const LearnerProgress = () => {
   const [progressData, setProgressData] = useState(null);
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [subjectDetail, setSubjectDetail] = useState(null);
+  const [quizResults, setQuizResults] = useState([]);
+  const [showQuizResults, setShowQuizResults] = useState(false);
 
   useEffect(() => {
     fetchProgress();
+    fetchQuizResults();
   }, []);
 
   const fetchProgress = async () => {
@@ -42,6 +49,17 @@ export const LearnerProgress = () => {
       setError(err.response?.data?.message || err.message || 'Failed to load progress data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchQuizResults = async () => {
+    try {
+      const response = await quizAPI.getMyResults();
+      if (response.success) {
+        setQuizResults(response.data || []);
+      }
+    } catch (err) {
+      console.error('Failed to fetch quiz results:', err);
     }
   };
 
@@ -228,7 +246,7 @@ export const LearnerProgress = () => {
                       <p className="font-medium text-slate-900">{quiz.title}</p>
                     </div>
                     <div className="text-right">
-                      {quiz.attempt?.status === 'completed' ? (
+                      {quiz.attempt?.status && ['submitted', 'auto_submitted', 'graded', 'completed'].includes(quiz.attempt.status) ? (
                         <div>
                           <p className={`text-2xl font-bold ${quiz.attempt.passed ? 'text-green-600' : 'text-red-600'}`}>
                             {quiz.attempt.percentage}%
@@ -378,6 +396,72 @@ export const LearnerProgress = () => {
           </div>
         </div>
       </div>
+
+      {/* Quiz Results Section */}
+      {quizResults.length > 0 && (
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xl font-semibold text-slate-900 flex items-center">
+              <Trophy className="w-5 h-5 mr-2 text-yellow-500" />
+              Quiz Results
+            </h2>
+            <button
+              onClick={() => setShowQuizResults(!showQuizResults)}
+              className="text-sm text-blue-600 hover:text-blue-700"
+            >
+              {showQuizResults ? 'Hide' : 'Show All'}
+            </button>
+          </div>
+          
+          <div className={`bg-white rounded-xl shadow-sm overflow-hidden transition-all ${
+            showQuizResults ? '' : 'max-h-64'
+          }`}>
+            <div className="divide-y">
+              {quizResults.slice(0, showQuizResults ? undefined : 3).map((result) => (
+                <div key={result.id} className="p-4 hover:bg-slate-50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="font-medium text-slate-900">{result.quiz_title}</p>
+                      <p className="text-sm text-slate-500">{result.subject_name}</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2">
+                        {result.passed ? (
+                          <CheckCircle className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <XCircle className="w-5 h-5 text-red-500" />
+                        )}
+                        <span className={`font-bold ${
+                          result.passed ? 'text-green-600' : 'text-red-600'
+                        }`}>
+                          {result.percentage_score}%
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        {result.total_score}/{result.max_possible_score} points
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-sm text-slate-500">
+                    <span className="flex items-center gap-1">
+                      <Clock className="w-4 h-4" />
+                      {Math.floor(result.time_taken_seconds / 60)}m {result.time_taken_seconds % 60}s
+                    </span>
+                    <span>
+                      {new Date(result.submitted_at).toLocaleDateString()}
+                    </span>
+                    {result.teacher_reviewed && (
+                      <span className="text-blue-600 bg-blue-50 px-2 py-0.5 rounded text-xs">
+                        Reviewed by Teacher
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

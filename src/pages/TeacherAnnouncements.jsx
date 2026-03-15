@@ -55,8 +55,8 @@ export function TeacherAnnouncements() {
           grade.subjects?.forEach(subject => {
             allSubjects.push({
               id: subject.subjectId,
-              name: subject.name,
-              code: subject.code,
+              name: subject.subjectName,
+              code: subject.subjectCode,
               department: subject.department,
               gradeName: grade.gradeName,
               gradeId: grade.gradeId

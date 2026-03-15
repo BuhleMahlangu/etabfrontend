@@ -70,7 +70,7 @@ export const subjectAPI = {
 };
 
 export const materialAPI = {
-  getAll: () => api.get('/materials'),
+  getAll: (params) => api.get('/materials', { params }),
   getById: (id) => api.get(`/materials/${id}`),
   getBySubject: (subjectId) => api.get(`/materials/subject/${subjectId}`),
   upload: (formData) => api.post('/materials', formData, {
@@ -85,9 +85,33 @@ export const deadlineAPI = {
 };
 
 export const notificationAPI = {
-  getMyNotifications: () => api.get('/notifications/my-notifications'),
+  getMyNotifications: (params) => api.get('/notifications', { params }),
   markAsRead: (id) => api.put(`/notifications/${id}/read`),
   markAllAsRead: () => api.put('/notifications/read-all'),
+  delete: (id) => api.delete(`/notifications/${id}`),
+  getStats: () => api.get('/notifications/stats'),
+};
+
+export const supportAPI = {
+  // User routes
+  sendMessage: (data) => api.post('/support/messages', data),
+  getMyMessages: () => api.get('/support/my-messages'),
+};
+
+export const subjectMessageAPI = {
+  // Send message in a subject
+  sendMessage: (data) => api.post('/subject-messages/messages', data),
+  // Get conversations for current user
+  getConversations: () => api.get('/subject-messages/conversations'),
+  // Get messages for a specific subject
+  getSubjectMessages: (subjectId, otherUserId) => api.get(`/subject-messages/subject/${subjectId}`, { params: { otherUserId } }),
+  // Get unread count
+  getUnreadCount: () => api.get('/subject-messages/unread-count'),
+  // Mark messages as read
+  markAsRead: (data) => api.put('/subject-messages/mark-read', data),
+  // Teacher routes
+  getTeacherSubjects: () => api.get('/subject-messages/teacher/subjects'),
+  getSubjectLearners: (subjectId) => api.get(`/subject-messages/teacher/subject/${subjectId}/learners`),
 };
 
 export const announcementAPI = {
@@ -121,17 +145,24 @@ export const quizAPI = {
   create: (data) => api.post('/quizzes', data),
   update: (id, data) => api.put(`/quizzes/${id}`, data),
   delete: (id) => api.delete(`/quizzes/${id}`),
-  addQuestion: (quizId, data) => api.post(`/quizzes/${quizId}/questions`, data),
+  publish: (id) => api.post(`/quizzes/${id}/publish`),
+  unpublish: (id) => api.post(`/quizzes/${id}/unpublish`),
   startAttempt: (quizId) => api.post(`/quizzes/${quizId}/start`),
-  saveAnswer: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/save`, data),
+  submitAnswer: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/answer`, data),
   submitQuiz: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/submit`, data),
-  getMyResults: (quizId) => api.get(`/quizzes/${quizId}/my-results`),
+  getMyResults: () => api.get('/quizzes/my-results/all'),
   getStatistics: (quizId) => api.get(`/quizzes/${quizId}/statistics`),
+  // Teacher review
+  getAttempts: (quizId) => api.get(`/quizzes/${quizId}/attempts`),
+  resetStudentAttempt: (quizId, learnerId) => api.post(`/quizzes/${quizId}/reset/${learnerId}`),
+  getAttemptForReview: (attemptId) => api.get(`/quizzes/attempts/${attemptId}/review`),
+  overrideAnswerMark: (answerId, data) => api.put(`/quizzes/answers/${answerId}/override`, data),
 };
 
 export const teacherAPI = {
   getMyAssignments: () => api.get('/teachers/my-assignments'),
   getDashboard: () => api.get('/teachers/dashboard'),
+  getMyStudents: () => api.get('/teachers/my-students'),
 };
 
 export const enrollmentAPI = {
@@ -144,6 +175,37 @@ export const progressAPI = {
   getMyProgress: () => api.get('/progress/my-progress'),
   getSubjectProgress: (subjectId) => api.get(`/progress/subject/${subjectId}`),
   getProgressHistory: (months = 6) => api.get(`/progress/history?months=${months}`),
+};
+
+export const adminAPI = {
+  // Users
+  getAllUsers: () => api.get('/admin/users'),
+  getUser: (id) => api.get(`/admin/users/${id}`),
+  updateUser: (id, data) => api.put(`/admin/users/${id}`, data),
+  deleteUser: (id) => api.delete(`/admin/users/${id}`),
+  updateUserStatus: (id, isActive) => api.put(`/admin/users/${id}/status`, { isActive }),
+  
+  // Subjects
+  getAllSubjects: () => api.get('/admin/subjects'),
+  getSubject: (id) => api.get(`/admin/subjects/${id}`),
+  createSubject: (data) => api.post('/admin/subjects', data),
+  updateSubject: (id, data) => api.put(`/admin/subjects/${id}`, data),
+  getAllGrades: () => api.get('/admin/grades'),
+  deleteSubject: (id) => api.delete(`/admin/subjects/${id}`),
+  updateSubjectStatus: (id, isActive) => api.put(`/admin/subjects/${id}/status`, { isActive }),
+  
+  // Dashboard
+  getDashboardStats: () => api.get('/admin/dashboard'),
+  getPendingTeachers: () => api.get('/admin/teachers/pending'),
+  approveTeacher: (id) => api.post(`/admin/teachers/${id}/approve`),
+  rejectTeacher: (id, reason) => api.post(`/admin/teachers/${id}/reject`, { reason }),
+  
+  // Support Messages
+  getAllSupportMessages: (params) => api.get('/support/admin/messages', { params }),
+  getSupportMessage: (id) => api.get(`/support/admin/messages/${id}`),
+  respondToMessage: (id, data) => api.put(`/support/admin/messages/${id}/respond`, data),
+  updateMessageStatus: (id, status) => api.put(`/support/admin/messages/${id}/status`, { status }),
+  deleteMessage: (id) => api.delete(`/support/admin/messages/${id}`),
 };
 
 export default api;

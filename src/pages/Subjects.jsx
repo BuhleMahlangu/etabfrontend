@@ -7,6 +7,7 @@ import { Input } from '../components/common/Input';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from '../context/AuthContext';
+import { SubjectChat } from '../components/SubjectChat';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -22,6 +23,10 @@ export const Subjects = () => {
   const [summary, setSummary] = useState(null);
   const [error, setError] = useState(null);
   const [isFET, setIsFET] = useState(false);
+  
+  // Chat state
+  const [chatOpen, setChatOpen] = useState(false);
+  const [selectedSubject, setSelectedSubject] = useState(null);
 
   useEffect(() => {
     fetchMySubjects();
@@ -302,6 +307,24 @@ export const Subjects = () => {
                           <span>{subject.credits} credits</span>
                         </div>
 
+                        {/* Message Teacher button */}
+                        <Button
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSelectedSubject(subject);
+                            setChatOpen(true);
+                          }}
+                          variant="secondary"
+                          size="sm"
+                          className="mt-2"
+                        >
+                          <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                          Message Teacher
+                        </Button>
+
                         {/* NEW: Drop button for FET optional subjects */}
                         {isFET && !subject.isCompulsory && (
                           <Button
@@ -404,6 +427,18 @@ export const Subjects = () => {
         <div className="text-center py-8 bg-slate-50 rounded-xl border-2 border-dashed border-slate-200">
           <p className="text-slate-500">No more optional subjects available.</p>
         </div>
+      )}
+
+      {/* Subject Chat Modal */}
+      {selectedSubject && (
+        <SubjectChat
+          subjectId={selectedSubject.id}
+          subjectName={selectedSubject.name}
+          teacherId={selectedSubject.teacher_id}
+          teacherName={selectedSubject.teacher_name || 'Teacher'}
+          isOpen={chatOpen}
+          onClose={() => setChatOpen(false)}
+        />
       )}
     </div>
   );

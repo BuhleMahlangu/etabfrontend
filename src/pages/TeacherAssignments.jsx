@@ -72,8 +72,8 @@ export function TeacherAssignments() {
           grade.subjects?.forEach(subject => {
             allSubjects.push({
               id: subject.subjectId,
-              name: subject.name,
-              code: subject.code,
+              name: subject.subjectName,
+              code: subject.subjectCode,
               gradeName: grade.gradeName,
               gradeId: grade.gradeId
             });
