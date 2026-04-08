@@ -85,6 +85,14 @@ export function AuthProvider({ children }) {
     return user.role === roles;
   };
 
+  // Update user profile (used after profile update in settings)
+  const updateProfile = (profileData) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      ...profileData
+    }));
+  };
+
   return (
     <AuthContext.Provider value={{ 
       user, 
@@ -93,7 +101,8 @@ export function AuthProvider({ children }) {
       logout, 
       hasRole, 
       loading,
-      fetchCurrentUser
+      fetchCurrentUser,
+      updateProfile
     }}>
       {children}
     </AuthContext.Provider>

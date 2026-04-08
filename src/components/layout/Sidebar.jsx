@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { subjectMessageAPI, notificationAPI } from '../../services/api';
+import { useQuizLock } from '../../context/QuizLockContext';
+import { subjectMessageAPI, notificationAPI, materialAPI } from '../../services/api';
 import { 
   LayoutDashboard, 
   BookOpen, 
@@ -21,20 +22,26 @@ import {
   Sparkles,
   MessageCircle,
   Inbox,
-  Mail
+  Mail,
+  Shield
 } from 'lucide-react';
 
 export function Sidebar() {
   const { user, logout } = useAuth();
+  const { isQuizLocked } = useQuizLock();
   const location = useLocation();
+  
+  // Don't render sidebar when quiz is locked
+  if (isQuizLocked) return null;
   const [hoveredItem, setHoveredItem] = useState(null);
   const [isExpanded, setIsExpanded] = useState(true);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [unreadNotifications, setUnreadNotifications] = useState(0);
+  const [materialsCount, setMaterialsCount] = useState(0);
 
-  // Fetch unread counts
+  // Fetch unread counts and materials
   useEffect(() => {
-    const fetchUnreadCounts = async () => {
+    const fetchCounts = async () => {
       try {
         // Get unread subject messages
         const msgRes = await subjectMessageAPI.getUnreadCount();
@@ -47,16 +54,24 @@ export function Sidebar() {
         if (notifRes.success) {
           setUnreadNotifications(notifRes.data?.unread || 0);
         }
+        
+        // Get materials count for learners
+        if (user?.role === 'learner') {
+          const matRes = await materialAPI.getAll({ limit: 1 });
+          if (matRes.success) {
+            setMaterialsCount(matRes.pagination?.totalCount || 0);
+          }
+        }
       } catch (err) {
-        console.error('Failed to fetch unread counts:', err);
+        console.error('Failed to fetch counts:', err);
       }
     };
     
-    fetchUnreadCounts();
+    fetchCounts();
     // Poll every 30 seconds
-    const interval = setInterval(fetchUnreadCounts, 30000);
+    const interval = setInterval(fetchCounts, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [user?.role]);
 
   // Define menu items based on user role
   const getMenuItems = () => {
@@ -70,7 +85,7 @@ export function Sidebar() {
         { to: '/learner/assignments', icon: FileText, label: 'My Assignments', color: 'orange' },
         { to: '/learner/quizzes', icon: HelpCircle, label: 'My Quizzes', color: 'purple' },
         { to: '/deadlines', icon: Calendar, label: 'My Deadlines', color: 'red' },
-        { to: '/materials', icon: FolderOpen, label: 'All Materials', badge: 'new', color: 'teal' },
+        { to: '/materials', icon: FolderOpen, label: 'All Materials', badge: materialsCount > 0 ? materialsCount : null, color: 'teal' },
         { to: '/my-messages', icon: MessageCircle, label: 'My Messages', badge: unreadMessages > 0 ? unreadMessages : null, color: 'pink' },
         { to: '/notifications', icon: Bell, label: 'Notifications', badge: unreadNotifications > 0 ? unreadNotifications : null, color: 'pink' },
         { to: '/progress', icon: TrendingUp, label: 'My Progress', color: 'green' },
@@ -97,17 +112,25 @@ export function Sidebar() {
       ];
     }
 
-    // Admin menu
-    if (role === 'admin') {
-      return [
+    // Admin menu - both super admins and school admins
+    if (role === 'admin' || role === 'school_admin') {
+      const baseMenu = [
         { to: '/dashboard', icon: LayoutDashboard, label: 'Dashboard', color: 'blue' },
         { to: '/admin', icon: SettingsIcon, label: 'Admin Panel', color: 'indigo' },
         { to: '/admin/users', icon: Users, label: 'Manage Users', color: 'green' },
         { to: '/admin/subjects', icon: BookOpen, label: 'Manage Subjects', color: 'teal' },
         { to: '/admin/support', icon: Inbox, label: 'Support Messages', color: 'orange' },
+        { to: '/admin/notifications/send', icon: Megaphone, label: 'Send Global Notification', color: 'red' },
         { to: '/notifications', icon: Bell, label: 'Notifications', color: 'pink' },
         { to: '/settings', icon: SettingsIcon, label: 'Settings', color: 'slate' },
       ];
+      
+      // School admins can contact Super Admin
+      if (role === 'school_admin') {
+        baseMenu.splice(5, 0, { to: '/contact-super-admin', icon: Shield, label: 'Contact Super Admin', color: 'purple' });
+      }
+      
+      return baseMenu;
     }
 
     // Fallback
@@ -137,6 +160,7 @@ export function Sidebar() {
   const getRoleBadgeColor = (role) => {
     switch (role) {
       case 'admin': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400';
+      case 'school_admin': return 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-400';
       case 'teacher': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400';
       default: return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400';
     }
@@ -222,7 +246,9 @@ export function Sidebar() {
             <p className="text-xs text-slate-500 truncate">{user?.email}</p>
             <div className="flex items-center gap-1 mt-1">
               <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${getRoleBadgeColor(user?.role)}`}>
-                {user?.role}
+                {user?.role === 'school_admin' ? 'School Admin' : 
+                 user?.role === 'admin' ? 'Super Admin' :
+                 user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
               </span>
               {user?.role === 'learner' && user?.grade && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-700 dark:text-slate-400">
@@ -230,6 +256,12 @@ export function Sidebar() {
                 </span>
               )}
             </div>
+            {/* Show school name for school admins */}
+            {user?.role === 'school_admin' && user?.schoolId && (
+              <p className="text-xs text-indigo-600 dark:text-indigo-400 mt-1 truncate">
+                School Code: {user?.schoolId?.slice(0, 8)}...
+              </p>
+            )}
           </div>
         </div>
         <button

@@ -4,35 +4,100 @@ import { Button } from '../components/common/Button';
 import { Input } from '../components/common/Input';
 import { useToast } from '../components/common/Toast';
 import { Badge } from '../components/common/Badge';
-import { Check, X, Users, BookOpen, Plus, ChevronDown, ChevronUp } from 'lucide-react';
+import { 
+  Check, X, Users, BookOpen, Plus, ChevronDown, ChevronUp, 
+  GraduationCap, School, ArrowRight, Sparkles, Award, 
+  UserCircle, Lock, Mail, Briefcase, ChevronLeft, CheckCircle2,
+  BookOpenCheck, UserPlus, Shield
+} from 'lucide-react';
+import { SchoolCodeInput } from '../components/SchoolCodeInput';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
-const GRADES = [
-  'Grade 1', 'Grade 2', 'Grade 3',
-  'Grade 4', 'Grade 5', 'Grade 6',
-  'Grade 7', 'Grade 8', 'Grade 9',
-  'Grade 10', 'Grade 11', 'Grade 12'
-];
+// Animated floating shapes component
+function FloatingShapes() {
+  return (
+    <div className="absolute inset-0 overflow-hidden pointer-events-none">
+      {[...Array(6)].map((_, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full mix-blend-overlay animate-float"
+          style={{
+            width: `${100 + i * 50}px`,
+            height: `${100 + i * 50}px`,
+            background: `rgba(255,255,255,${0.05 + i * 0.02})`,
+            left: `${10 + i * 15}%`,
+            top: `${20 + (i % 3) * 25}%`,
+            animationDelay: `${i * 0.5}s`,
+            animationDuration: `${6 + i}s`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
-const PHASES = {
-  'Grade 1': 'Foundation', 'Grade 2': 'Foundation', 'Grade 3': 'Foundation',
-  'Grade 4': 'Intermediate', 'Grade 5': 'Intermediate', 'Grade 6': 'Intermediate',
-  'Grade 7': 'Senior', 'Grade 8': 'Senior', 'Grade 9': 'Senior',
-  'Grade 10': 'FET', 'Grade 11': 'FET', 'Grade 12': 'FET'
-};
+// Feature card component
+function FeatureCard({ icon: Icon, title, delay }) {
+  return (
+    <div 
+      className="flex items-center gap-3 p-4 bg-white/10 backdrop-blur-sm rounded-xl border border-white/20 animate-fade-in-up"
+      style={{ animationDelay: `${delay}ms` }}
+    >
+      <div className="p-2 bg-white/20 rounded-lg">
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <span className="text-white/90 text-sm font-medium">{title}</span>
+    </div>
+  );
+}
 
-// Helper function to extract grade number from "Grade X" format
-const extractGradeNumber = (gradeString) => {
-  if (!gradeString) return '';
-  // Extract number from "Grade 8" -> "8"
-  const match = gradeString.toString().match(/\d+/);
-  return match ? match[0] : gradeString;
-};
+// Progress step indicator
+function StepIndicator({ currentStep, totalSteps, labels }) {
+  return (
+    <div className="flex items-center justify-center mb-8">
+      {Array.from({ length: totalSteps }).map((_, idx) => {
+        const stepNum = idx + 1;
+        const isActive = stepNum === currentStep;
+        const isCompleted = stepNum < currentStep;
+        
+        return (
+          <React.Fragment key={stepNum}>
+            <div className="flex flex-col items-center">
+              <div 
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-all duration-300 ${
+                  isActive 
+                    ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/30 scale-110' 
+                    : isCompleted 
+                      ? 'bg-green-500 text-white' 
+                      : 'bg-slate-200 text-slate-400'
+                }`}
+              >
+                {isCompleted ? <Check className="w-5 h-5" /> : stepNum}
+              </div>
+              <span className={`text-xs mt-2 font-medium transition-colors ${
+                isActive ? 'text-blue-600' : isCompleted ? 'text-green-600' : 'text-slate-400'
+              }`}>
+                {labels[idx]}
+              </span>
+            </div>
+            {stepNum < totalSteps && (
+              <div className={`w-16 h-1 mx-2 rounded-full transition-colors ${
+                isCompleted ? 'bg-green-500' : 'bg-slate-200'
+              }`} />
+            )}
+          </React.Fragment>
+        );
+      })}
+    </div>
+  );
+}
 
 export function Register() {
   const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
+    schoolCode: '',
+    schoolId: '',
     firstName: '',
     lastName: '',
     email: '',
@@ -40,15 +105,14 @@ export function Register() {
     confirmPassword: '',
     role: 'learner',
     grade: '',
-    // Teacher fields
     employeeNumber: '',
     qualification: '',
     specialization: '',
     yearsOfExperience: '',
     bio: '',
-    // Teacher subject assignments
     assignments: []
   });
+  const [selectedSchool, setSelectedSchool] = useState(null);
   const [gradeDetails, setGradeDetails] = useState(null);
   const [availableGrades, setAvailableGrades] = useState([]);
   const [selectedGradeForSubjects, setSelectedGradeForSubjects] = useState(null);
@@ -57,13 +121,55 @@ export function Register() {
   const [error, setError] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [showSubjectSelector, setShowSubjectSelector] = useState(false);
+  const [focusedField, setFocusedField] = useState(null);
   const { addToast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch available grades on mount
+  // Add animation styles
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes float {
+        0%, 100% { transform: translateY(0) rotate(0deg); }
+        50% { transform: translateY(-20px) rotate(5deg); }
+      }
+      @keyframes gradient-shift {
+        0% { background-position: 0% 50%; }
+        50% { background-position: 100% 50%; }
+        100% { background-position: 0% 50%; }
+      }
+      @keyframes fade-in-up {
+        from { opacity: 0; transform: translateY(20px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+      @keyframes pulse-glow {
+        0%, 100% { box-shadow: 0 0 20px rgba(59, 130, 246, 0.3); }
+        50% { box-shadow: 0 0 40px rgba(59, 130, 246, 0.6); }
+      }
+      @keyframes slide-in-right {
+        from { opacity: 0; transform: translateX(30px); }
+        to { opacity: 1; transform: translateX(0); }
+      }
+      .animate-float { animation: float 6s ease-in-out infinite; }
+      .animate-gradient { background-size: 200% 200%; animation: gradient-shift 8s ease infinite; }
+      .animate-fade-in-up { animation: fade-in-up 0.6s ease-out forwards; opacity: 0; }
+      .animate-pulse-glow { animation: pulse-glow 2s ease-in-out infinite; }
+      .animate-slide-in { animation: slide-in-right 0.5s ease-out forwards; }
+    `;
+    document.head.appendChild(style);
+    return () => document.head.removeChild(style);
+  }, []);
+
   useEffect(() => {
     fetchAvailableGrades();
   }, []);
+
+  useEffect(() => {
+    if (formData.role === 'learner' && formData.grade) {
+      const grade = availableGrades.find(g => g.grade === formData.grade);
+      setGradeDetails(grade || null);
+    }
+  }, [formData.grade, formData.role, availableGrades]);
 
   const fetchAvailableGrades = async () => {
     try {
@@ -77,19 +183,10 @@ export function Register() {
     }
   };
 
-  // Fetch grade details when learner selects grade
-  useEffect(() => {
-    if (formData.role === 'learner' && formData.grade) {
-      // Find grade details using the full grade string (e.g., "Grade 8")
-      const grade = availableGrades.find(g => g.grade === formData.grade || extractGradeNumber(g.grade) === formData.grade);
-      setGradeDetails(grade || null);
-    }
-  }, [formData.grade, formData.role, availableGrades]);
-
-  // Fetch subjects when teacher expands subject selector
   const fetchSubjectsForGrade = async (gradeId) => {
     try {
-      const response = await fetch(`${API_URL}/subjects/grade-subjects/${gradeId}`);
+      const schoolCode = selectedSchool?.code || formData.schoolCode;
+      const response = await fetch(`${API_URL}/subjects/grade-subjects/${gradeId}?schoolCode=${schoolCode}`);
       const data = await response.json();
       if (data.success) {
         setAvailableSubjects(data.subjects);
@@ -100,6 +197,12 @@ export function Register() {
       console.error('Failed to fetch subjects:', err);
       addToast('Failed to load subjects', 'error');
     }
+  };
+
+  const extractGradeNumber = (gradeString) => {
+    if (!gradeString) return '';
+    const match = gradeString.toString().match(/\d+/);
+    return match ? match[0] : gradeString;
   };
 
   const toggleSubject = (subjectId) => {
@@ -124,11 +227,9 @@ export function Register() {
       isPrimary: formData.assignments.length === 0
     };
 
-    // Check if grade already exists
     const existingIndex = formData.assignments.findIndex(a => a.gradeId === selectedGradeForSubjects.id);
     
     if (existingIndex >= 0) {
-      // Merge subjects
       const updated = [...formData.assignments];
       const existing = updated[existingIndex];
       const newSubjects = selectedSubjects.filter(id => !existing.subjectIds.includes(id));
@@ -160,21 +261,6 @@ export function Register() {
     }));
   };
 
-  const removeSubjectFromAssignment = (gradeId, subjectId) => {
-    setFormData(prev => ({
-      ...prev,
-      assignments: prev.assignments.map(a => {
-        if (a.gradeId === gradeId) {
-          return {
-            ...a,
-            subjectIds: a.subjectIds.filter(id => id !== subjectId)
-          };
-        }
-        return a;
-      }).filter(a => a.subjectIds.length > 0)
-    }));
-  };
-
   const getSubjectDetails = (subjectId) => {
     return availableSubjects.find(s => s.id === subjectId) || {};
   };
@@ -191,23 +277,18 @@ export function Register() {
     }
 
     try {
-      // ============================================
-      // FIXED: Extract just the grade number for backend
-      // ============================================
       const gradeNumber = formData.role === 'learner' ? extractGradeNumber(formData.grade) : null;
-      console.log('🔥 [Register] Sending grade:', gradeNumber, 'from:', formData.grade);
-
-      // Build request body based on role
+      
       const requestBody = {
         firstName: formData.firstName,
         lastName: formData.lastName,
         email: formData.email,
         password: formData.password,
         role: formData.role,
-        grade: gradeNumber // Send "8" instead of "Grade 8"
+        grade: gradeNumber,
+        schoolId: formData.schoolId
       };
 
-      // Add teacher info if role is teacher
       if (formData.role === 'teacher') {
         requestBody.teacherInfo = {
           employeeNumber: formData.employeeNumber || `TCH${Date.now()}`,
@@ -219,8 +300,6 @@ export function Register() {
         };
       }
 
-      console.log('🔥 [Register] Request body:', JSON.stringify(requestBody, null, 2));
-
       const registerResponse = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,58 +307,46 @@ export function Register() {
       });
 
       const registerData = await registerResponse.json();
-      console.log('🔥 [Register] Response:', registerData);
 
       if (!registerResponse.ok) {
         throw new Error(registerData.message || 'Registration failed');
       }
 
-      // ============================================
-      // TEACHER PENDING APPROVAL
-      // ============================================
       if (formData.role === 'teacher' && registerData.pending) {
-        setStep(3); // Show success/pending page
+        setStep(4);
         addToast('Registration submitted for admin approval!', 'success');
         return;
       }
 
-      // ============================================
-      // LEARNER IMMEDIATE REGISTRATION
-      // ============================================
       if (formData.role === 'learner') {
         if (!registerData.token) {
           throw new Error('Registration successful but no token received. Please login manually.');
         }
 
-        // Store token
         localStorage.setItem('token', registerData.token);
 
-        // Select grade (auto-enrolls in subjects) - send number here too
-        if (gradeNumber) {
+        if (formData.grade) {
           const selectGradeResponse = await fetch(`${API_URL}/subjects/select-grade`, {
             method: 'POST',
             headers: {
               'Authorization': `Bearer ${registerData.token}`,
               'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ grade: gradeNumber }) // Send "8" not "Grade 8"
+            body: JSON.stringify({ grade: formData.grade })
           });
 
           const gradeData = await selectGradeResponse.json();
           
-          if (!selectGradeResponse.ok) {
-            console.warn('Grade selection warning:', gradeData);
-            addToast('Account created, but there was an issue setting up your subjects.', 'warning');
-          } else {
-            addToast(`Welcome! You are now enrolled in ${gradeData.autoEnrolled} subjects for ${formData.grade}.`, 'success');
+          if (selectGradeResponse.ok) {
+            addToast(`Welcome! You are now enrolled in ${gradeData.autoEnrolled} subjects.`, 'success');
           }
         }
 
-        setStep(3); // Show success page
+        setStep(4);
       }
 
     } catch (err) {
-      console.error('❌ [Register] Error:', err);
+      console.error('Registration error:', err);
       setError(err.message || 'Registration failed');
       addToast(err.message || 'Registration failed', 'error');
     } finally {
@@ -287,87 +354,145 @@ export function Register() {
     }
   };
 
-  // Step 1: Basic Info
+  // Left side branding component
+  const LeftBranding = ({ title, subtitle, features }) => (
+    <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-700 animate-gradient" />
+      <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10" />
+      <FloatingShapes />
+      
+      <div className="relative z-10 flex flex-col justify-center p-12 text-white w-full">
+        <div className="max-w-md mx-auto">
+          <div className="relative mb-8 animate-fade-in-up">
+            <div className="absolute inset-0 bg-white/30 blur-3xl rounded-full animate-pulse" />
+            <img 
+              src="/E-tab logo.png" 
+              alt="E-tab Logo" 
+              className="relative h-28 w-auto mx-auto drop-shadow-2xl filter brightness-110"
+            />
+          </div>
+          
+          <h1 className="text-5xl font-bold mb-4 animate-fade-in-up" style={{ animationDelay: '100ms' }}>
+            {title}
+          </h1>
+          
+          <p className="text-xl text-blue-100 mb-8 animate-fade-in-up" style={{ animationDelay: '200ms' }}>
+            {subtitle}
+          </p>
+          
+          <div className="space-y-3">
+            {features.map((feature, idx) => (
+              <FeatureCard 
+                key={idx}
+                icon={feature.icon} 
+                title={feature.title} 
+                delay={300 + idx * 100} 
+              />
+            ))}
+          </div>
+          
+          <div className="mt-10 pt-8 border-t border-white/20 grid grid-cols-3 gap-6 animate-fade-in-up" style={{ animationDelay: '600ms' }}>
+            <div className="text-center">
+              <div className="text-3xl font-bold">10K+</div>
+              <div className="text-sm text-blue-200">Students</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">500+</div>
+              <div className="text-sm text-blue-200">Teachers</div>
+            </div>
+            <div className="text-center">
+              <div className="text-3xl font-bold">100+</div>
+              <div className="text-sm text-blue-200">Schools</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+
+  // Step 1: School Selection
   if (step === 1) {
     return (
       <div className="min-h-screen flex">
-        <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-600 to-blue-800 items-center justify-center text-white p-12">
-          <div className="text-center">
-            <img src="/E-tab logo.png" alt="E-tab" className="h-24 w-auto mx-auto mb-6 drop-shadow-lg" />
-            <h1 className="text-5xl font-bold mb-6">Join E-tab</h1>
-            <p className="text-xl text-blue-100">Start your learning journey today</p>
-          </div>
-        </div>
+        <LeftBranding 
+          title="Join E-tab"
+          subtitle="Start your learning journey today. Connect with your school and access world-class education."
+          features={[
+            { icon: School, title: 'Connect with Your School' },
+            { icon: BookOpen, title: 'Access Learning Materials' },
+            { icon: Users, title: 'Learn with Peers' }
+          ]}
+        />
 
-        <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-slate-50">
-          <div className="w-full max-w-md">
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
+          <div className="w-full max-w-md animate-slide-in">
             <div className="text-center mb-8">
               <img src="/E-tab logo.png" alt="E-tab" className="h-16 w-auto mx-auto mb-4 lg:hidden" />
-              <h2 className="text-2xl font-bold text-slate-900">Create your account</h2>
+              <h2 className="text-3xl font-bold text-slate-900">Find Your School</h2>
+              <p className="text-slate-500 mt-2">Enter your school code to get started</p>
             </div>
 
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="First Name"
-                  placeholder="John"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                />
-                <Input
-                  label="Last Name"
-                  placeholder="Doe"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                />
-              </div>
+            <StepIndicator 
+              currentStep={1} 
+              totalSteps={4} 
+              labels={['School', 'Account', 'Details', 'Done']} 
+            />
 
-              <Input
-                label="Email"
-                type="email"
-                placeholder="you@school.edu"
-                value={formData.email}
-                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              />
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              <div className="space-y-6">
+                <SchoolCodeInput 
+                  onSchoolFound={(school) => {
+                    setSelectedSchool(school);
+                    setFormData({ 
+                      ...formData, 
+                      schoolCode: school.code,
+                      schoolId: school.id 
+                    });
+                  }}
+                  onError={() => {
+                    setSelectedSchool(null);
+                    setFormData({ ...formData, schoolCode: '', schoolId: '' });
+                  }}
+                />
 
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">I am a</label>
-                <div className="grid grid-cols-2 gap-3">
-                  {['learner', 'teacher'].map((role) => (
-                    <button
-                      key={role}
-                      type="button"
-                      onClick={() => setFormData({ 
-                        ...formData, 
-                        role, 
-                        grade: '', 
-                        assignments: [],
-                        employeeNumber: '',
-                        qualification: '',
-                        specialization: '',
-                        yearsOfExperience: '',
-                        bio: ''
-                      })}
-                      className={`px-4 py-2 rounded-lg text-sm font-medium border transition-all capitalize ${
-                        formData.role === role
-                          ? 'bg-blue-50 border-blue-500 text-blue-700'
-                          : 'bg-white border-slate-200 text-slate-600'
-                      }`}
-                    >
-                      {role}
-                    </button>
-                  ))}
+                {selectedSchool && (
+                  <div className="p-4 bg-green-50 rounded-xl border border-green-200 animate-fade-in-up">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <CheckCircle2 className="w-5 h-5 text-green-600" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-900">{selectedSchool.name}</p>
+                        <p className="text-sm text-green-600">School verified</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <Button 
+                  onClick={() => selectedSchool && setStep(2)} 
+                  className="w-full py-3 text-lg"
+                  disabled={!selectedSchool}
+                >
+                  Continue
+                  <ArrowRight className="w-5 h-5 ml-2" />
+                </Button>
+
+                <div className="text-center space-y-3">
+                  <p className="text-sm text-slate-500">
+                    Don't know your school code?{' '}
+                    <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                      Ask your teacher
+                    </Link>
+                  </p>
+                  <p className="text-sm text-slate-500">
+                    Already have an account?{' '}
+                    <Link to="/login" className="text-blue-600 hover:text-blue-700 font-medium">
+                      Sign in
+                    </Link>
+                  </p>
                 </div>
               </div>
-
-              <Button onClick={() => setStep(2)} className="w-full">
-                Continue
-              </Button>
-
-              <p className="text-center text-sm text-slate-500">
-                Already have an account?{' '}
-                <Link to="/login" className="text-blue-600 hover:underline">Sign in</Link>
-              </p>
             </div>
           </div>
         </div>
@@ -375,308 +500,520 @@ export function Register() {
     );
   }
 
-  // Step 2: Role-specific details
+  // Step 2: Basic Info
   if (step === 2) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
-        <div className="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-8">
-          <button 
-            onClick={() => setStep(1)} 
-            className="text-slate-500 hover:text-slate-700 mb-4"
-          >
-            ← Back
-          </button>
+      <div className="min-h-screen flex">
+        <LeftBranding 
+          title="Create Account"
+          subtitle={`Registering for ${selectedSchool?.name}`}
+          features={[
+            { icon: UserPlus, title: 'Create Your Profile' },
+            { icon: Shield, title: 'Secure Account' },
+            { icon: Sparkles, title: 'Start Learning' }
+          ]}
+        />
 
-          <h2 className="text-2xl font-bold text-slate-900 mb-6">
-            {formData.role === 'learner' ? 'Select Your Grade' : 'Teacher Registration'}
-          </h2>
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
+          <div className="w-full max-w-md animate-slide-in">
+            <div className="text-center mb-8">
+              <img src="/E-tab logo.png" alt="E-tab" className="h-16 w-auto mx-auto mb-4 lg:hidden" />
+              <h2 className="text-3xl font-bold text-slate-900">Create your account</h2>
+              <p className="text-sm text-slate-500 mt-1">{selectedSchool?.name}</p>
+            </div>
 
-          {/* LEARNER: Grade Selection */}
-          {formData.role === 'learner' && (
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-slate-700 mb-2">Current Grade</label>
-              <select
-                value={formData.grade}
-                onChange={(e) => setFormData({ ...formData, grade: e.target.value })}
-                className="w-full rounded-xl border border-slate-200 px-4 py-2.5"
-              >
-                <option value="">Select grade...</option>
-                {availableGrades.map(grade => (
-                  <option key={grade.grade} value={grade.grade}>
-                    {grade.grade} ({grade.phase})
-                  </option>
-                ))}
-              </select>
+            <StepIndicator 
+              currentStep={2} 
+              totalSteps={4} 
+              labels={['School', 'Account', 'Details', 'Done']} 
+            />
 
-              {gradeDetails && (
-                <div className="mt-4 p-4 bg-blue-50 rounded-lg">
-                  <p className="text-sm text-blue-700">
-                    <strong>Phase:</strong> {gradeDetails.phase}<br />
-                    <strong>Total Subjects:</strong> {gradeDetails.total_modules}<br />
-                    <strong>Compulsory:</strong> {gradeDetails.compulsory_count} subjects<br />
-                    {gradeDetails.optional_count > 0 && (
-                      <>
-                        <strong>Optional:</strong> {gradeDetails.optional_count} subjects<br />
-                      </>
-                    )}
-                  </p>
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              <div className="space-y-5">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">First Name</label>
+                    <div className="relative">
+                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="John"
+                        value={formData.firstName}
+                        onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                        onFocus={() => setFocusedField('firstName')}
+                        onBlur={() => setFocusedField(null)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Last Name</label>
+                    <div className="relative">
+                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="text"
+                        placeholder="Doe"
+                        value={formData.lastName}
+                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                        onFocus={() => setFocusedField('lastName')}
+                        onBlur={() => setFocusedField(null)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <input
+                      type="email"
+                      placeholder="you@school.edu"
+                      value={formData.email}
+                      onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                      onFocus={() => setFocusedField('email')}
+                      onBlur={() => setFocusedField(null)}
+                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.password}
+                        onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                        onFocus={() => setFocusedField('password')}
+                        onBlur={() => setFocusedField(null)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                  <div className="relative">
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm</label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <input
+                        type="password"
+                        placeholder="••••••••"
+                        value={formData.confirmPassword}
+                        onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                        onFocus={() => setFocusedField('confirmPassword')}
+                        onBlur={() => setFocusedField(null)}
+                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-3">I am a</label>
+                  <div className="grid grid-cols-2 gap-4">
+                    {[
+                      { id: 'learner', label: 'Learner', icon: GraduationCap },
+                      { id: 'teacher', label: 'Teacher', icon: Briefcase }
+                    ].map((role) => {
+                      const Icon = role.icon;
+                      const isSelected = formData.role === role.id;
+                      return (
+                        <button
+                          key={role.id}
+                          type="button"
+                          onClick={() => setFormData({ 
+                            ...formData, 
+                            role: role.id, 
+                            grade: '', 
+                            assignments: []
+                          })}
+                          className={`flex flex-col items-center gap-2 p-4 rounded-xl border-2 transition-all ${
+                            isSelected
+                              ? 'bg-blue-50 border-blue-500 text-blue-700'
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                          }`}
+                        >
+                          <Icon className={`w-6 h-6 ${isSelected ? 'text-blue-600' : 'text-slate-400'}`} />
+                          <span className="font-medium">{role.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => setStep(1)} 
+                    className="flex-1"
+                  >
+                    <ChevronLeft className="w-4 h-4 mr-2" />
+                    Back
+                  </Button>
+                  <Button 
+                    onClick={() => setStep(3)} 
+                    className="flex-1"
+                    disabled={!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword}
+                  >
+                    Continue
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Step 3: Role-specific details
+  if (step === 3) {
+    return (
+      <div className="min-h-screen flex">
+        <LeftBranding 
+          title={formData.role === 'learner' ? 'Select Grade' : 'Teacher Profile'}
+          subtitle={formData.role === 'learner' 
+            ? 'Choose your current grade level' 
+            : 'Tell us about your teaching experience'}
+          features={[
+            { icon: Award, title: 'Quality Education' },
+            { icon: BookOpenCheck, title: 'Expert Teachers' },
+            { icon: Users, title: 'Collaborative Learning' }
+          ]}
+        />
+
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
+          <div className="w-full max-w-lg animate-slide-in">
+            <div className="text-center mb-8">
+              <img src="/E-tab logo.png" alt="E-tab" className="h-16 w-auto mx-auto mb-4 lg:hidden" />
+              <h2 className="text-3xl font-bold text-slate-900">
+                {formData.role === 'learner' ? 'Select Your Grade' : 'Teacher Registration'}
+              </h2>
+            </div>
+
+            <StepIndicator 
+              currentStep={3} 
+              totalSteps={4} 
+              labels={['School', 'Account', 'Details', 'Done']} 
+            />
+
+            <div className="bg-white rounded-2xl shadow-lg p-6 sm:p-8">
+              {/* LEARNER: Grade Selection */}
+              {formData.role === 'learner' && (
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-3">Current Grade</label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                      {availableGrades.map((grade) => {
+                        const isSelected = formData.grade === grade.grade;
+                        return (
+                          <button
+                            key={grade.grade}
+                            type="button"
+                            onClick={() => setFormData({ ...formData, grade: grade.grade })}
+                            className={`p-3 rounded-xl border-2 text-left transition-all ${
+                              isSelected
+                                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                                : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300'
+                            }`}
+                          >
+                            <div className="font-medium text-sm">{grade.grade}</div>
+                            <div className={`text-xs ${isSelected ? 'text-blue-500' : 'text-slate-400'}`}>
+                              {grade.phase}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+
+                  {gradeDetails && (
+                    <div className="p-4 bg-blue-50 rounded-xl border border-blue-200 animate-fade-in-up">
+                      <h4 className="font-semibold text-blue-900 mb-2">Grade Information</h4>
+                      <div className="grid grid-cols-2 gap-3 text-sm">
+                        <div>
+                          <span className="text-blue-600">Phase:</span>
+                          <span className="ml-2 text-blue-900">{gradeDetails.phase}</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-600">Subjects:</span>
+                          <span className="ml-2 text-blue-900">{gradeDetails.total_modules}</span>
+                        </div>
+                        <div>
+                          <span className="text-blue-600">Compulsory:</span>
+                          <span className="ml-2 text-blue-900">{gradeDetails.compulsory_count}</span>
+                        </div>
+                        {gradeDetails.optional_count > 0 && (
+                          <div>
+                            <span className="text-blue-600">Optional:</span>
+                            <span className="ml-2 text-blue-900">{gradeDetails.optional_count}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* TEACHER: Professional Details */}
-          {formData.role === 'teacher' && (
-            <div className="space-y-4 mb-6">
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg mb-4">
-                <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> Teacher registrations require admin approval. 
-                  You'll be able to log in once an administrator reviews and approves your request.
-                </p>
-              </div>
+              {/* TEACHER: Teacher-specific fields */}
+              {formData.role === 'teacher' && (
+                <div className="space-y-5 max-h-[60vh] overflow-y-auto pr-2">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Employee Number</label>
+                      <input
+                        type="text"
+                        placeholder="TCH001"
+                        value={formData.employeeNumber}
+                        onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-slate-700 mb-1.5">Years Experience</label>
+                      <input
+                        type="number"
+                        placeholder="5"
+                        value={formData.yearsOfExperience}
+                        onChange={(e) => setFormData({ ...formData, yearsOfExperience: e.target.value })}
+                        className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      />
+                    </div>
+                  </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <Input
-                  label="Employee Number"
-                  placeholder="Auto-generated if empty"
-                  value={formData.employeeNumber}
-                  onChange={(e) => setFormData({ ...formData, employeeNumber: e.target.value })}
-                />
-                <Input
-                  label="Years of Experience"
-                  type="number"
-                  placeholder="0"
-                  value={formData.yearsOfExperience}
-                  onChange={(e) => setFormData({ ...formData, yearsOfExperience: e.target.value })}
-                />
-              </div>
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Qualification</label>
+                    <input
+                      type="text"
+                      placeholder="Bachelor of Education"
+                      value={formData.qualification}
+                      onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    />
+                  </div>
 
-              <Input
-                label="Qualification"
-                placeholder="e.g., B.Ed, M.Sc Education"
-                value={formData.qualification}
-                onChange={(e) => setFormData({ ...formData, qualification: e.target.value })}
-              />
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Specialization</label>
+                    <input
+                      type="text"
+                      placeholder="Mathematics, Science"
+                      value={formData.specialization}
+                      onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                    />
+                  </div>
 
-              <Input
-                label="Specialization"
-                placeholder="e.g., Mathematics, Science"
-                value={formData.specialization}
-                onChange={(e) => setFormData({ ...formData, specialization: e.target.value })}
-              />
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">Bio</label>
-                <textarea
-                  className="w-full rounded-xl border border-slate-200 px-4 py-2.5"
-                  rows={3}
-                  value={formData.bio}
-                  onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
-                  placeholder="Tell us about your teaching experience..."
-                />
-              </div>
-
-              {/* Subject Assignment Section */}
-              <div className="border border-slate-200 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-4">
-                  <h4 className="font-medium text-slate-900">Subject Assignments</h4>
-                  <Badge variant="primary">{formData.assignments.length} grades</Badge>
-                </div>
-
-                {/* Current Assignments */}
-                {formData.assignments.length > 0 && (
-                  <div className="space-y-2 mb-4">
+                  {/* Subject Assignments */}
+                  <div className="border-t border-slate-200 pt-4">
+                    <label className="block text-sm font-medium text-slate-700 mb-3">Subject Assignments</label>
+                    
                     {formData.assignments.map((assignment, idx) => (
-                      <div key={idx} className="bg-slate-50 p-3 rounded-lg">
+                      <div key={assignment.gradeId} className="mb-3 p-3 bg-slate-50 rounded-lg">
                         <div className="flex items-center justify-between mb-2">
-                          <span className="font-medium">{assignment.gradeName}</span>
+                          <span className="font-medium text-slate-700">{assignment.gradeName}</span>
                           <button
-                            type="button"
                             onClick={() => removeAssignment(assignment.gradeId)}
-                            className="text-red-500 hover:text-red-700 text-sm"
+                            className="text-red-500 hover:text-red-700"
                           >
                             <X className="w-4 h-4" />
                           </button>
                         </div>
-                        <div className="flex flex-wrap gap-1">
+                        <div className="flex flex-wrap gap-2">
                           {assignment.subjectIds.map(subjectId => {
                             const subject = getSubjectDetails(subjectId);
                             return (
-                              <span 
-                                key={subjectId}
-                                className="inline-flex items-center px-2 py-1 bg-white border rounded text-xs"
-                              >
-                                {subject.name || 'Subject'}
-                                <button
-                                  type="button"
-                                  onClick={() => removeSubjectFromAssignment(assignment.gradeId, subjectId)}
-                                  className="ml-1 text-slate-400 hover:text-red-500"
-                                >
-                                  <X className="w-3 h-3" />
-                                </button>
-                              </span>
+                              <Badge key={subjectId} variant="info" className="text-xs">
+                                {subject.name || subject.subject_name || 'Subject'}
+                              </Badge>
                             );
                           })}
                         </div>
                       </div>
                     ))}
-                  </div>
-                )}
 
-                {/* Add Assignment Button */}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setShowSubjectSelector(!showSubjectSelector)}
-                  className="w-full"
-                >
-                  <Plus className="w-4 h-4 mr-2" />
-                  Add Subject Assignment
-                </Button>
-
-                {/* Subject Selector */}
-                {showSubjectSelector && (
-                  <div className="mt-4 p-4 border border-slate-200 rounded-lg bg-slate-50">
-                    <h5 className="font-medium mb-3">Select Grade & Subjects</h5>
-                    
-                    <select
-                      className="w-full rounded-lg border border-slate-300 px-3 py-2 mb-3"
-                      onChange={(e) => {
-                        const grade = availableGrades.find(g => g.id === e.target.value);
-                        if (grade) fetchSubjectsForGrade(grade.id);
-                      }}
-                      value={selectedGradeForSubjects?.id || ''}
-                    >
-                      <option value="">Choose a grade...</option>
-                      {availableGrades.map(grade => (
-                        <option key={grade.id} value={grade.id}>
-                          {grade.grade}
-                        </option>
-                      ))}
-                    </select>
-
-                    {selectedGradeForSubjects && (
-                      <div className="space-y-2 max-h-48 overflow-y-auto mb-3">
-                        {availableSubjects.map(subject => (
-                          <div
-                            key={subject.id}
-                            onClick={() => toggleSubject(subject.id)}
-                            className={`p-2 rounded border cursor-pointer flex items-center justify-between ${
-                              selectedSubjects.includes(subject.id)
-                                ? 'border-blue-500 bg-blue-50'
-                                : 'border-slate-200 bg-white'
-                            }`}
+                    {!showSubjectSelector ? (
+                      <button
+                        onClick={() => {
+                          setShowSubjectSelector(true);
+                          if (availableGrades.length > 0) {
+                            fetchSubjectsForGrade(availableGrades[0].id);
+                          }
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Subject Assignment
+                      </button>
+                    ) : (
+                      <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
+                        <div className="mb-3">
+                          <label className="block text-sm font-medium text-slate-700 mb-2">Select Grade</label>
+                          <select
+                            onChange={(e) => fetchSubjectsForGrade(e.target.value)}
+                            className="w-full px-3 py-2 rounded-lg border border-slate-200"
+                            defaultValue=""
                           >
-                            <div>
-                              <p className="font-medium text-sm">{subject.name}</p>
-                              <p className="text-xs text-slate-500">{subject.code}</p>
+                            <option value="" disabled>Choose grade...</option>
+                            {availableGrades.map(grade => (
+                              <option key={grade.id} value={grade.id}>{grade.grade}</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {availableSubjects.length > 0 && (
+                          <div className="mb-3">
+                            <label className="block text-sm font-medium text-slate-700 mb-2">Select Subjects</label>
+                            <div className="grid grid-cols-2 gap-2 max-h-40 overflow-y-auto">
+                              {availableSubjects.map(subject => (
+                                <label
+                                  key={subject.id}
+                                  className={`flex items-center gap-2 p-2 rounded-lg cursor-pointer transition-colors ${
+                                    selectedSubjects.includes(subject.id)
+                                      ? 'bg-blue-100 border border-blue-300'
+                                      : 'bg-white border border-slate-200 hover:border-slate-300'
+                                  }`}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedSubjects.includes(subject.id)}
+                                    onChange={() => toggleSubject(subject.id)}
+                                    className="rounded text-blue-600"
+                                  />
+                                  <span className="text-sm">{subject.name || subject.subject_name}</span>
+                                </label>
+                              ))}
                             </div>
-                            {selectedSubjects.includes(subject.id) && (
-                              <Check className="w-4 h-4 text-blue-600" />
-                            )}
                           </div>
-                        ))}
+                        )}
+
+                        <div className="flex gap-2">
+                          <button
+                            onClick={addAssignment}
+                            disabled={selectedSubjects.length === 0}
+                            className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                          >
+                            Add Assignment
+                          </button>
+                          <button
+                            onClick={() => {
+                              setShowSubjectSelector(false);
+                              setSelectedSubjects([]);
+                            }}
+                            className="px-4 py-2 text-slate-600 hover:bg-slate-100 rounded-lg transition-colors"
+                          >
+                            Cancel
+                          </button>
+                        </div>
                       </div>
                     )}
-
-                    <div className="flex gap-2">
-                      <Button
-                        type="button"
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowSubjectSelector(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        onClick={addAssignment}
-                        disabled={selectedSubjects.length === 0}
-                      >
-                        Add {selectedSubjects.length} Subject{selectedSubjects.length !== 1 ? 's' : ''}
-                      </Button>
-                    </div>
                   </div>
-                )}
+
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1.5">Bio</label>
+                    <textarea
+                      placeholder="Tell us about yourself..."
+                      value={formData.bio}
+                      onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
+                      rows={3}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all resize-none"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {error && (
+                <div className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-700 text-sm">
+                  {error}
+                </div>
+              )}
+
+              <div className="flex gap-3 pt-4">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setStep(2)} 
+                  className="flex-1"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-2" />
+                  Back
+                </Button>
+                <Button 
+                  onClick={handleSubmit}
+                  className="flex-1"
+                  isLoading={isLoading}
+                  disabled={formData.role === 'learner' ? !formData.grade : false}
+                >
+                  {isLoading ? 'Creating Account...' : 'Complete Registration'}
+                  {!isLoading && <Check className="w-4 h-4 ml-2" />}
+                </Button>
               </div>
             </div>
-          )}
-
-          <div className="space-y-4">
-            <Input
-              label="Password"
-              type="password"
-              placeholder="Min 8 characters"
-              value={formData.password}
-              onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-            />
-            <Input
-              label="Confirm Password"
-              type="password"
-              placeholder="••••••••"
-              value={formData.confirmPassword}
-              onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-            />
           </div>
-
-          {error && (
-            <div className="mt-4 p-3 bg-red-50 text-red-600 rounded-lg text-sm">
-              {error}
-            </div>
-          )}
-
-          <Button 
-            onClick={handleSubmit} 
-            className="w-full mt-6" 
-            isLoading={isLoading}
-            disabled={formData.role === 'learner' ? !formData.grade : false}
-          >
-            {formData.role === 'teacher' ? 'Submit for Approval' : 'Create Account'}
-          </Button>
         </div>
       </div>
     );
   }
 
-  // Step 3: Success
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 p-8">
-      <div className="text-center max-w-md">
-        <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-          <Check className="w-10 h-10 text-green-600" />
-        </div>
-        
-        {formData.role === 'teacher' ? (
-          <>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Registration Submitted!</h2>
-            <p className="text-slate-500 mb-6">
-              Your teacher registration has been submitted for admin approval. 
-              You'll receive an email once your account is approved.
-            </p>
-            <div className="p-4 bg-amber-50 rounded-lg mb-6">
-              <p className="text-sm text-amber-700">
-                <strong>Status:</strong> Pending Approval<br />
-                <strong>Email:</strong> {formData.email}
+  // Step 4: Success
+  if (step === 4) {
+    return (
+      <div className="min-h-screen flex">
+        <LeftBranding 
+          title="Welcome!"
+          subtitle="Your account has been created successfully."
+          features={[
+            { icon: CheckCircle2, title: 'Account Created' },
+            { icon: BookOpen, title: 'Start Learning' },
+            { icon: Users, title: 'Join Community' }
+          ]}
+        />
+
+        <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
+          <div className="w-full max-w-md text-center animate-slide-in">
+            <div className="bg-white rounded-2xl shadow-lg p-8 sm:p-12">
+              <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 animate-pulse-glow">
+                <CheckCircle2 className="w-10 h-10 text-green-600" />
+              </div>
+              
+              <h2 className="text-3xl font-bold text-slate-900 mb-4">
+                {formData.role === 'teacher' ? 'Registration Submitted!' : 'Welcome to E-tab!'}
+              </h2>
+              
+              <p className="text-slate-500 mb-8">
+                {formData.role === 'teacher' 
+                  ? 'Your account is pending admin approval. You will be notified once approved.'
+                  : `Your account has been created successfully. You are now enrolled in ${formData.grade}.`
+                }
               </p>
+
+              <div className="space-y-3">
+                {formData.role === 'learner' && (
+                  <Button 
+                    onClick={() => navigate('/dashboard')}
+                    className="w-full py-3"
+                  >
+                    Go to Dashboard
+                    <ArrowRight className="w-5 h-5 ml-2" />
+                  </Button>
+                )}
+                <Button 
+                  variant="outline"
+                  onClick={() => navigate('/login')}
+                  className="w-full"
+                >
+                  Go to Login
+                </Button>
+              </div>
             </div>
-            <Button onClick={() => navigate('/login')}>Go to Login</Button>
-          </>
-        ) : (
-          <>
-            <h2 className="text-2xl font-bold text-slate-900 mb-2">Account Created!</h2>
-            <p className="text-slate-500 mb-6">
-              Welcome to E-tab! You are now enrolled in {gradeDetails?.compulsory_count || 'all'} compulsory subjects for {formData.grade}.
-            </p>
-            {parseInt(extractGradeNumber(formData.grade)) >= 10 && (
-              <p className="text-sm text-amber-600 mb-4">
-                Don't forget to select your optional subjects after logging in!
-              </p>
-            )}
-            <Button onClick={() => navigate('/login')}>Sign In</Button>
-          </>
-        )}
+          </div>
+        </div>
       </div>
-    </div>
-  );
+    );
+  }
 }
+
+export default Register;

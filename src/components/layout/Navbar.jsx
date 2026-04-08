@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
+import { useQuizLock } from '../../context/QuizLockContext';
 import { Button } from '../common/Button';
 import { Badge } from '../common/Badge';
+import { Lock } from 'lucide-react';
 
 export function Navbar() {
   const { user, logout } = useAuth();
+  const { isQuizLocked } = useQuizLock();
   const location = useLocation();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -14,6 +17,33 @@ export function Navbar() {
     { to: '/subjects', label: 'Subjects' },
     { to: '/materials', label: 'Materials' },
   ];
+
+  // When quiz is locked, show a minimal locked navbar
+  if (isQuizLocked) {
+    return (
+      <nav className="sticky top-0 z-50 bg-slate-900 border-b border-slate-800">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            {/* Locked indicator */}
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-blue-600/20 flex items-center justify-center">
+                <Lock className="w-4 h-4 text-blue-400" />
+              </div>
+              <span className="text-white font-medium">Quiz in Progress</span>
+            </div>
+
+            {/* Minimal user info */}
+            <div className="flex items-center gap-3">
+              <Badge variant="warning">Locked</Badge>
+              <span className="text-sm text-slate-400 hidden sm:block">
+                {user?.firstName}
+              </span>
+            </div>
+          </div>
+        </div>
+      </nav>
+    );
+  }
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-slate-200">
@@ -51,8 +81,10 @@ export function Navbar() {
           <div className="flex items-center gap-3">
             {user ? (
               <div className="flex items-center gap-3">
-                <Badge variant={user.role === 'admin' ? 'primary' : 'success'}>
-                  {user.role}
+                <Badge variant={user.role === 'admin' || user.role === 'school_admin' ? 'primary' : 'success'}>
+                  {user.role === 'school_admin' ? 'School Admin' : 
+                   user.role === 'admin' ? 'Super Admin' :
+                   user.role?.charAt(0).toUpperCase() + user.role?.slice(1)}
                 </Badge>
                 <span className="text-sm font-medium text-slate-700 hidden sm:block">
                   {user.firstName}

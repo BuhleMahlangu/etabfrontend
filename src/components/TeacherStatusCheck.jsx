@@ -106,36 +106,43 @@ export function TeacherStatusCheck() {
 
       {/* Result Display */}
       {result && (
-        <div className={`mt-6 p-6 rounded-xl border ${getStatusColor(result.status || 'not-found')}`}>
+        <div className={`mt-6 p-6 rounded-xl border ${getStatusColor(result.data?.status || 'not-found')}`}>
           <div className="text-center">
-            {result.found ? (
+            {result.data?.status !== 'not_found' ? (
               <>
                 <div className="flex justify-center mb-4">
-                  {getStatusIcon(result.status)}
+                  {getStatusIcon(result.data?.status)}
                 </div>
                 
                 <h4 className="text-lg font-bold mb-2">
-                  {result.data?.firstName} {result.data?.lastName}
+                  Application Status
                 </h4>
                 
-                <p className="text-sm mb-4">{result.data?.email}</p>
+                <p className="text-sm mb-4">{email}</p>
                 
                 <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium mb-4 ${
-                  result.status === 'pending' ? 'bg-amber-100 text-amber-800' :
-                  result.status === 'approved' ? 'bg-green-100 text-green-800' :
+                  result.data?.status === 'pending' ? 'bg-amber-100 text-amber-800' :
+                  result.data?.status === 'approved' ? 'bg-green-100 text-green-800' :
                   'bg-red-100 text-red-800'
                 }`}>
-                  {result.status === 'pending' && <Clock className="w-4 h-4" />}
-                  {result.status === 'approved' && <CheckCircle className="w-4 h-4" />}
-                  {result.status === 'rejected' && <XCircle className="w-4 h-4" />}
-                  <span className="capitalize">{result.status}</span>
+                  {result.data?.status === 'pending' && <Clock className="w-4 h-4" />}
+                  {result.data?.status === 'approved' && <CheckCircle className="w-4 h-4" />}
+                  {result.data?.status === 'rejected' && <XCircle className="w-4 h-4" />}
+                  <span className="capitalize">{result.data?.status}</span>
                 </div>
 
-                <p className="text-sm mt-4">
-                  {result.data?.message}
-                </p>
+                {result.data?.status === 'approved' && (
+                  <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                    <p className="text-xs text-slate-600">
+                      Approved on: {new Date(result.data?.reviewedAt).toLocaleDateString()}
+                    </p>
+                    <p className="text-xs text-slate-500 mt-1">
+                      You can now log in with your credentials.
+                    </p>
+                  </div>
+                )}
 
-                {result.status === 'pending' && (
+                {result.data?.status === 'pending' && (
                   <div className="mt-4 p-3 bg-white/50 rounded-lg">
                     <p className="text-xs text-slate-600">
                       Applied on: {new Date(result.data?.requestedAt).toLocaleDateString()}
@@ -146,10 +153,17 @@ export function TeacherStatusCheck() {
                   </div>
                 )}
 
-                {result.status === 'rejected' && result.data?.reviewedAt && (
-                  <p className="text-xs text-slate-500 mt-4">
-                    Reviewed on: {new Date(result.data.reviewedAt).toLocaleDateString()}
-                  </p>
+                {result.data?.status === 'rejected' && result.data?.reviewedAt && (
+                  <div className="mt-4 p-3 bg-white/50 rounded-lg">
+                    <p className="text-xs text-slate-600">
+                      Reviewed on: {new Date(result.data.reviewedAt).toLocaleDateString()}
+                    </p>
+                    {result.data?.rejectionReason && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Reason: {result.data.rejectionReason}
+                      </p>
+                    )}
+                  </div>
                 )}
               </>
             ) : (
@@ -157,7 +171,7 @@ export function TeacherStatusCheck() {
                 <AlertCircle className="w-16 h-16 text-slate-400 mx-auto mb-4" />
                 <h4 className="text-lg font-bold text-slate-900 mb-2">Not Found</h4>
                 <p className="text-sm text-slate-600 mb-4">
-                  {result.message}
+                  No application found for this email address.
                 </p>
                 <Button 
                   variant="outline" 

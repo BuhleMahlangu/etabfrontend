@@ -1,0 +1,1 @@
+export { QuizLockModal } from './QuizLockModal';

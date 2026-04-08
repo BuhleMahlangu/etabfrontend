@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/common/C
 import { Button } from '../components/common/Button';
 import { Badge } from '../components/common/Badge';
 import { useToast } from '../components/common/Toast';
+import { useAuth } from '../context/AuthContext';
 import { 
   Users, 
   UserCheck, 
@@ -22,7 +23,10 @@ import {
   Mail,
   Briefcase,
   Award,
-  Calendar
+  Calendar,
+  Building2,
+  Shield,
+  Megaphone
 } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -39,6 +43,7 @@ export const AdminDashboard = () => {
   const [recentActivity, setRecentActivity] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeView, setActiveView] = useState('dashboard'); // 'dashboard' | 'pending'
+  const [schoolInfo, setSchoolInfo] = useState(null);
   
   // Modal states
   const [selectedTeacher, setSelectedTeacher] = useState(null);
@@ -49,6 +54,11 @@ export const AdminDashboard = () => {
   
   const { addToast } = useToast();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  
+  // Check if user is a school admin (not super admin)
+  const isSchoolAdmin = user?.role === 'school_admin';
+  const isSuperAdmin = user?.role === 'admin' && user?.isSuperAdmin;
 
   useEffect(() => {
     fetchDashboardData();
@@ -74,6 +84,10 @@ export const AdminDashboard = () => {
             totalAdmins: statsData.data?.totalAdmins || 0,
             recentPending: statsData.data?.recentPending || 0
           });
+          // Set school info if available
+          if (statsData.data?.school) {
+            setSchoolInfo(statsData.data.school);
+          }
         }
       }
 
@@ -430,13 +444,14 @@ export const AdminDashboard = () => {
       onClick: () => setActiveView('pending'),
       alert: stats.pendingTeachers > 0
     },
-    {
+    // Only show Administrators stat for super admins
+    ...(isSuperAdmin ? [{
       title: 'Administrators',
       value: stats.totalAdmins,
       icon: Award,
       color: 'purple',
       link: '/admin/admins'
-    }
+    }] : [])
   ];
 
   if (loading) {
@@ -449,11 +464,60 @@ export const AdminDashboard = () => {
 
   return (
     <div className="max-w-7xl mx-auto">
+      {/* School Info Card for School Admins */}
+      {isSchoolAdmin && schoolInfo && (
+        <div className="mb-6 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+              <Building2 className="w-7 h-7 text-white" />
+            </div>
+            <div className="flex-1">
+              <div className="flex items-center gap-3">
+                <h2 className="text-2xl font-bold">{schoolInfo.name}</h2>
+                <Badge className="bg-white/20 text-white border-0">
+                  Code: {schoolInfo.code}
+                </Badge>
+              </div>
+              <p className="text-blue-100 mt-1">
+                You are managing this school. All data shown is filtered for {schoolInfo.name} only.
+              </p>
+            </div>
+            {schoolInfo.address && (
+              <div className="text-right hidden md:block">
+                <p className="text-sm text-blue-100">{schoolInfo.address}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Super Admin Badge */}
+      {isSuperAdmin && (
+        <div className="mb-6 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl p-6 text-white shadow-lg">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 bg-white/20 rounded-xl flex items-center justify-center">
+              <Shield className="w-7 h-7 text-white" />
+            </div>
+            <div>
+              <h2 className="text-2xl font-bold">Super Admin Mode</h2>
+              <p className="text-purple-100 mt-1">
+                You have access to all schools and data across the platform.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold text-slate-900">Admin Dashboard</h1>
         <p className="text-slate-500 mt-2">
-          Welcome back! Here's what's happening in your institution.
+          {isSchoolAdmin && schoolInfo 
+            ? `Manage your school's teachers, learners, and resources.`
+            : isSuperAdmin 
+              ? 'Manage all schools, users, and system settings.'
+              : "Welcome back! Here's what's happening in your institution."
+          }
         </p>
       </div>
 
@@ -581,6 +645,24 @@ export const AdminDashboard = () => {
                   </div>
                 </div>
               </Button>
+
+              {!isSchoolAdmin && (
+                <Button 
+                  variant="outline" 
+                  className="justify-start h-auto py-4 border-red-200 hover:border-red-300"
+                  onClick={() => navigate('/admin/notifications/send')}
+                >
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <Megaphone className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div className="text-left">
+                      <p className="font-medium">Send Global Notification</p>
+                      <p className="text-sm text-slate-500">Announce to all users</p>
+                    </div>
+                  </div>
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -5,6 +5,7 @@ import { enrollmentAPI, subjectAPI, announcementAPI } from '../services/api';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
+import { AITutor } from '../components/AITutor';
 import { BookOpen, GraduationCap, Award, Calendar, TrendingUp, ChevronRight, Megaphone, Pin } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
@@ -437,6 +438,9 @@ export function Dashboard() {
           </div>
         )
       )}
+
+      {/* AI Tutor - Available on all pages for learners */}
+      <AITutor subject="general" />
     </div>
   );
 }

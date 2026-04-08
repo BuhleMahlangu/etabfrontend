@@ -1,7 +1,9 @@
 import axios from 'axios';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
+  baseURL: API_URL,
 });
 
 api.interceptors.request.use((config) => {
@@ -79,6 +81,11 @@ export const materialAPI = {
   delete: (id) => api.delete(`/materials/${id}`),
 };
 
+// Download API - uses proxy endpoint for proper filename support
+export const downloadAPI = {
+  material: (id) => `${API_URL}/download/materials/${id}`,
+};
+
 export const deadlineAPI = {
   getMyDeadlines: () => api.get('/deadlines/my-deadlines'),
   getBySubject: (subjectId) => api.get(`/deadlines/subject/${subjectId}`),
@@ -90,6 +97,7 @@ export const notificationAPI = {
   markAllAsRead: () => api.put('/notifications/read-all'),
   delete: (id) => api.delete(`/notifications/${id}`),
   getStats: () => api.get('/notifications/stats'),
+  sendGlobal: (data) => api.post('/notifications/global', data),
 };
 
 export const supportAPI = {
@@ -137,6 +145,9 @@ export const assignmentAPI = {
     headers: { 'Content-Type': 'multipart/form-data' }
   }),
   gradeSubmission: (submissionId, data) => api.post(`/assignments/submissions/${submissionId}/grade`, data),
+  extendDueDate: (id, data) => api.post(`/assignments/${id}/extend-due-date`, data),
+  // Download submission file - returns URL to the proxy endpoint
+  downloadSubmission: (submissionId) => `${API_URL}/assignments/submissions/${submissionId}/download`,
 };
 
 export const quizAPI = {
@@ -151,12 +162,14 @@ export const quizAPI = {
   submitAnswer: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/answer`, data),
   submitQuiz: (attemptId, data) => api.post(`/quizzes/attempts/${attemptId}/submit`, data),
   getMyResults: () => api.get('/quizzes/my-results/all'),
+  getStudentResults: (studentId) => api.get(`/quizzes/student/${studentId}/results`),
   getStatistics: (quizId) => api.get(`/quizzes/${quizId}/statistics`),
   // Teacher review
   getAttempts: (quizId) => api.get(`/quizzes/${quizId}/attempts`),
   resetStudentAttempt: (quizId, learnerId) => api.post(`/quizzes/${quizId}/reset/${learnerId}`),
   getAttemptForReview: (attemptId) => api.get(`/quizzes/attempts/${attemptId}/review`),
   overrideAnswerMark: (answerId, data) => api.put(`/quizzes/answers/${answerId}/override`, data),
+  extendDueDate: (id, data) => api.post(`/quizzes/${id}/extend-due-date`, data),
 };
 
 export const teacherAPI = {
@@ -166,6 +179,7 @@ export const teacherAPI = {
 };
 
 export const enrollmentAPI = {
+  getMyEnrollments: () => api.get('/enrollments/my-enrollments'),
   getMyReport: () => api.get('/enrollments/my-report'),
   getHistory: (phase) => api.get(`/enrollments/history${phase ? `?phase=${phase}` : ''}`),
   updateMarks: (enrollmentId, marks) => api.put(`/enrollments/${enrollmentId}/marks`, marks),
@@ -175,6 +189,19 @@ export const progressAPI = {
   getMyProgress: () => api.get('/progress/my-progress'),
   getSubjectProgress: (subjectId) => api.get(`/progress/subject/${subjectId}`),
   getProgressHistory: (months = 6) => api.get(`/progress/history?months=${months}`),
+};
+
+export const aiTutorAPI = {
+  ask: (data) => api.post('/ai-tutor/ask', data),
+  getHistory: (subject) => api.get(`/ai-tutor/history${subject ? `?subject=${subject}` : ''}`),
+};
+
+export const schoolAPI = {
+  register: (data) => api.post('/schools/register', data), // Public endpoint
+  getMySchool: () => api.get('/schools/my'),
+  updateMySchool: (data) => api.put('/schools/my', data),
+  getAllSchools: () => api.get('/schools'),
+  updateSubscription: (schoolId, data) => api.put(`/schools/${schoolId}/subscription`, data),
 };
 
 export const adminAPI = {
@@ -206,6 +233,25 @@ export const adminAPI = {
   respondToMessage: (id, data) => api.put(`/support/admin/messages/${id}/respond`, data),
   updateMessageStatus: (id, status) => api.put(`/support/admin/messages/${id}/status`, { status }),
   deleteMessage: (id) => api.delete(`/support/admin/messages/${id}`),
+};
+
+export const settingsAPI = {
+  // Get current user settings
+  getSettings: () => api.get('/settings'),
+  
+  // Update profile (works for both teachers and learners)
+  updateProfile: (data) => api.put('/settings/profile', data),
+  
+  // Password change with 2-step verification
+  requestPasswordChange: (currentPassword) => api.post('/settings/password/request-change', { currentPassword }),
+  verifyAndChangePassword: (verificationCode, newPassword) => api.post('/settings/password/verify-change', { 
+    verificationCode, 
+    newPassword 
+  }),
+  resend2FACode: () => api.post('/settings/password/resend-code'),
+  
+  // Notification preferences
+  updateNotificationPreferences: (emailNotifications) => api.put('/settings/notifications', { emailNotifications }),
 };
 
 export default api;

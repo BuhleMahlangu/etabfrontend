@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { quizAPI } from '../services/api';
+import { useQuizLock } from '../context/QuizLockContext';
 import { Card } from '../components/common/Card';
 import { Button } from '../components/common/Button';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { Badge } from '../components/common/Badge';
 import { Modal } from '../components/common/Modal';
-import { HelpCircle, Clock, Play, CheckCircle, XCircle, Trophy, AlertCircle, ChevronRight } from 'lucide-react';
+import { HelpCircle, Clock, Play, CheckCircle, XCircle, Trophy, AlertCircle, ChevronRight, Eye, BookOpen } from 'lucide-react';
 
 export function LearnerQuizzes() {
   const { subjectId } = useParams();
@@ -21,6 +22,11 @@ export function LearnerQuizzes() {
   const [showResults, setShowResults] = useState(false);
   const [results, setResults] = useState(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [feedbackData, setFeedbackData] = useState(null);
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
+  
+  const { lockQuiz, unlockQuiz, updateTimeRemaining } = useQuizLock();
 
   useEffect(() => {
     fetchQuizzes();
@@ -31,16 +37,19 @@ export function LearnerQuizzes() {
     if (attempt && timeRemaining > 0) {
       timer = setInterval(() => {
         setTimeRemaining((prev) => {
-          if (prev <= 1) {
+          const newTime = prev - 1;
+          // Update quiz lock context with remaining time
+          updateTimeRemaining(newTime);
+          if (newTime <= 0) {
             handleSubmit();
             return 0;
           }
-          return prev - 1;
+          return newTime;
         });
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [attempt, timeRemaining]);
+  }, [attempt, timeRemaining, updateTimeRemaining]);
 
   const fetchQuizzes = async () => {
     try {
@@ -70,6 +79,12 @@ export function LearnerQuizzes() {
         setCurrentQuestionIndex(0);
         setShowResults(false);
         setResults(null);
+        
+        // Lock the quiz - prevents navigation
+        lockQuiz({
+          title: response.data.quiz.title,
+          timeRemaining: response.data.timeRemaining
+        });
       }
     } catch (error) {
       console.error('Failed to start quiz:', error);
@@ -111,6 +126,10 @@ export function LearnerQuizzes() {
         setShowResults(true);
         setAttempt(null);
         setActiveQuiz(null);
+        
+        // Unlock the quiz - allow navigation again
+        unlockQuiz();
+        
         fetchQuizzes();
       }
     } catch (error) {
@@ -127,6 +146,29 @@ export function LearnerQuizzes() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const fetchFeedback = async (quizId) => {
+    setFeedbackLoading(true);
+    try {
+      // Fetch quiz results/feedback
+      const response = await quizAPI.getMyResults();
+      if (response.success && response.data.length > 0) {
+        // Get the most recent attempt for this quiz
+        const attempts = response.data.filter(a => a.quiz_id === quizId || a.quizId === quizId);
+        if (attempts.length > 0) {
+          setFeedbackData(attempts[0]);
+          setShowFeedback(true);
+        } else {
+          alert('No results found for this quiz');
+        }
+      }
+    } catch (error) {
+      console.error('Failed to fetch feedback:', error);
+      alert('Failed to load feedback');
+    } finally {
+      setFeedbackLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
@@ -135,14 +177,14 @@ export function LearnerQuizzes() {
     );
   }
 
-  // Quiz Taking Interface
+  // Quiz Taking Interface - Full screen lock mode
   if (activeQuiz && attempt) {
     const questions = attempt.questions || [];
     const currentQuestion = questions[currentQuestionIndex];
     const progress = ((currentQuestionIndex + 1) / questions.length) * 100;
 
     return (
-      <div className="max-w-3xl mx-auto p-6">
+      <div className="min-h-screen bg-slate-50 p-6">
         {/* Quiz Header */}
         <Card className="mb-4 p-4">
           <div className="flex items-center justify-between">
@@ -326,13 +368,94 @@ export function LearnerQuizzes() {
             <Button variant="outline" onClick={() => setShowResults(false)}>
               Back to Quizzes
             </Button>
-            {results.questionResults && results.questionResults.length > 0 && (
-              <Button onClick={() => {}} variant="outline">
-                Review Answers
-              </Button>
-            )}
           </div>
         </Card>
+      </div>
+    );
+  }
+
+  // Feedback/Review View
+  if (showFeedback && feedbackData) {
+    const answers = feedbackData.answers || [];
+    const hasCorrectAnswers = answers.some(a => a.correct_answer !== null);
+    
+    return (
+      <div className="max-w-3xl mx-auto p-6">
+        <Card className="mb-4 p-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-slate-900">{feedbackData.quiz_title}</h2>
+              <p className="text-sm text-slate-500">Quiz Feedback</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Badge variant={feedbackData.passed ? 'success' : 'error'}>
+                {feedbackData.passed ? 'PASSED' : 'FAILED'}
+              </Badge>
+              <span className="text-sm font-medium">
+                {feedbackData.percentage_score?.toFixed(1)}%
+              </span>
+            </div>
+          </div>
+        </Card>
+
+        {!hasCorrectAnswers ? (
+          <Card className="p-8 text-center">
+            <BookOpen className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <h3 className="text-lg font-medium text-slate-900 mb-1">Feedback Not Available</h3>
+            <p className="text-slate-500">The teacher has not made the correct answers available for this quiz.</p>
+          </Card>
+        ) : (
+          <div className="space-y-4">
+            {answers.map((answer, idx) => (
+              <Card key={answer.id} className={`p-4 border-l-4 ${answer.is_correct ? 'border-l-green-500' : 'border-l-red-500'}`}>
+                <div className="flex items-start gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${answer.is_correct ? 'bg-green-100 text-green-600' : 'bg-red-100 text-red-600'}`}>
+                    {answer.is_correct ? <CheckCircle className="w-5 h-5" /> : <XCircle className="w-5 h-5" />}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium text-slate-900 mb-2">{idx + 1}. {answer.question_text}</p>
+                    
+                    <div className="space-y-2 text-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-500">Your answer:</span>
+                        <span className={answer.is_correct ? 'text-green-600 font-medium' : 'text-red-600 font-medium'}>
+                          {answer.answer_text || answer.selected_options || 'Not answered'}
+                        </span>
+                      </div>
+                      
+                      {!answer.is_correct && answer.correct_answer && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-slate-500">Correct answer:</span>
+                          <span className="text-green-600 font-medium">
+                            {Array.isArray(answer.correct_answer) 
+                              ? answer.correct_answer.join(', ') 
+                              : answer.correct_answer}
+                          </span>
+                        </div>
+                      )}
+                      
+                      {answer.explanation && (
+                        <div className="mt-3 p-3 bg-blue-50 rounded-lg text-blue-700">
+                          <span className="font-medium">Explanation:</span> {answer.explanation}
+                        </div>
+                      )}
+                      
+                      <div className="text-slate-400 text-xs">
+                        Score: {answer.points_earned} / {answer.points_possible || answer.max_points} points
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        )}
+
+        <div className="mt-6 flex justify-center">
+          <Button variant="outline" onClick={() => setShowFeedback(false)}>
+            Back to Quizzes
+          </Button>
+        </div>
       </div>
     );
   }
@@ -385,9 +508,21 @@ export function LearnerQuizzes() {
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-slate-600">Best Score:</span>
                     <span className="font-semibold">
-                      {Math.max(...quiz.myAttempts.map(a => a.percentage || 0)).toFixed(1)}%
+                      {Math.max(...quiz.myAttempts.map(a => a.percentage_score || a.percentage || 0)).toFixed(1)}%
                     </span>
                   </div>
+                  
+                  {/* Feedback Button */}
+                  <Button 
+                    onClick={() => fetchFeedback(quiz.id)} 
+                    variant="outline" 
+                    className="w-full"
+                    disabled={feedbackLoading}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    {feedbackLoading ? 'Loading...' : 'View Feedback'}
+                  </Button>
+                  
                   {quiz.myAttempts.length < quiz.max_attempts && (
                     <Button 
                       onClick={() => startQuiz(quiz)} 

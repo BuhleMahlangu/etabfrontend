@@ -5,7 +5,8 @@ import { materialAPI, enrollmentAPI, subjectAPI } from '../services/api';
 import { Card } from '../components/common/Card';
 import { Badge } from '../components/common/Badge';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
-import { BookOpen, FileText, Download, ChevronLeft, GraduationCap, Calendar, Award, ArrowLeft } from 'lucide-react';
+import { BookOpen, FileText, Download, ChevronLeft, GraduationCap, Calendar, Award, ArrowLeft, Loader2 } from 'lucide-react';
+import { downloadAPI } from '../services/api';
 
 export function LearnerMaterials() {
   const { subjectId } = useParams();
@@ -26,6 +27,7 @@ export function LearnerMaterials() {
   // State for active tab
   const [activeTab, setActiveTab] = useState('current'); // 'current' or 'history'
   const [selectedHistoryGrade, setSelectedHistoryGrade] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
 
   // Fetch current subjects and enrollment history on mount
   useEffect(() => {
@@ -127,6 +129,59 @@ export function LearnerMaterials() {
       png: 'Image',
     };
     return types[ext] || 'File';
+  };
+
+  const handleDownload = async (material) => {
+    try {
+      setDownloadingId(material.id);
+      
+      // Get token
+      const token = localStorage.getItem('token')?.replace(/^["']|["']$/g, '');
+      
+      // Fetch the file through the proxy with authentication
+      const downloadUrl = downloadAPI.material(material.id);
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Download failed');
+      }
+      
+      // Get filename from Content-Disposition header or use material title
+      const disposition = response.headers.get('content-disposition');
+      let filename = material.original_filename || material.title;
+      if (disposition) {
+        const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Download error:', error);
+      // Fallback: open file directly
+      if (material.file_url) {
+        window.open(material.file_url, '_blank');
+      }
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -376,15 +431,23 @@ export function LearnerMaterials() {
                           <span>{new Date(material.created_at).toLocaleDateString()}</span>
                         </div>
                       </div>
-                      <a
-                        href={material.file_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                      <button
+                        onClick={() => handleDownload(material)}
+                        disabled={downloadingId === material.id}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors text-sm font-medium"
                       >
-                        <Download className="w-4 h-4" />
-                        Open
-                      </a>
+                        {downloadingId === material.id ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                            Downloading...
+                          </>
+                        ) : (
+                          <>
+                            <Download className="w-4 h-4" />
+                            Download
+                          </>
+                        )}
+                      </button>
                     </div>
                   </Card>
                 ))}

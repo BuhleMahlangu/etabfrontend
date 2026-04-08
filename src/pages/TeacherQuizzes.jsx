@@ -41,7 +41,9 @@ export function TeacherQuizzes() {
     shuffleQuestions: false,
     showCorrectAnswers: true,
     applicableGrades: [],
-    questions: []
+    questions: [],
+    availableFrom: '',
+    availableUntil: ''
   });
 
   // Current question being added
@@ -166,7 +168,9 @@ export function TeacherQuizzes() {
         shuffleQuestions: quizForm.shuffleQuestions,
         showCorrectAnswers: quizForm.showCorrectAnswers,
         applicableGrades: quizForm.applicableGrades,
-        questions: quizForm.questions
+        questions: quizForm.questions,
+        availableFrom: quizForm.availableFrom,
+        availableUntil: quizForm.availableUntil
       });
 
       if (response.success) {
@@ -274,7 +278,9 @@ export function TeacherQuizzes() {
       shuffleQuestions: false,
       showCorrectAnswers: true,
       applicableGrades: [],
-      questions: []
+      questions: [],
+      availableFrom: '',
+      availableUntil: ''
     });
     setCurrentQuestion({
       text: '',
@@ -469,6 +475,42 @@ export function TeacherQuizzes() {
                 value={quizForm.passingScore}
                 onChange={(e) => setQuizForm({ ...quizForm, passingScore: parseInt(e.target.value) })}
               />
+            </div>
+
+            {/* Open and Due Dates */}
+            <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Open Date & Time
+                  </span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={quizForm.availableFrom}
+                  onChange={(e) => setQuizForm({ ...quizForm, availableFrom: e.target.value })}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <p className="text-xs text-slate-500 mt-1">When students can start the quiz</p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">
+                  <span className="flex items-center gap-1">
+                    <Clock className="w-4 h-4" />
+                    Due Date & Time <span className="text-red-500">*</span>
+                  </span>
+                </label>
+                <input
+                  type="datetime-local"
+                  value={quizForm.availableUntil}
+                  onChange={(e) => setQuizForm({ ...quizForm, availableUntil: e.target.value })}
+                  min={quizForm.availableFrom}
+                  className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Deadline for quiz completion</p>
+              </div>
             </div>
 
             <div className="flex items-center gap-6">

@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSettings } from '../context/SettingsContext';
 import { useToast } from '../components/common/Toast';
+import { settingsAPI } from '../services/api';
 import { 
   Moon, 
   Sun, 
@@ -24,7 +25,7 @@ import {
 
 export const Settings = () => {
   const navigate = useNavigate();
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile: updateAuthProfile } = useAuth();
   const { settings, updateSetting, toggleDarkMode, resetSettings } = useSettings();
   const { addToast } = useToast();
   const [activeTab, setActiveTab] = useState('appearance');
@@ -44,7 +45,11 @@ export const Settings = () => {
     currentPassword: '',
     newPassword: '',
     confirmPassword: '',
+    verificationCode: '',
   });
+  const [passwordStep, setPasswordStep] = useState(1); // 1 = enter current, 2 = enter code & new password
+  const [maskedEmail, setMaskedEmail] = useState('');
+  const [isCodeSending, setIsCodeSending] = useState(false);
 
   const tabs = [
     { id: 'appearance', label: 'Appearance', icon: Palette },
@@ -57,33 +62,99 @@ export const Settings = () => {
   const handleProfileSave = async () => {
     setIsSaving(true);
     try {
-      await updateProfile(profileForm);
-      addToast('Profile updated successfully!', 'success');
+      const response = await settingsAPI.updateProfile(profileForm);
+      if (response.success) {
+        updateAuthProfile(profileForm);
+        addToast('Profile updated successfully!', 'success');
+      } else {
+        addToast(response.message || 'Failed to update profile', 'error');
+      }
     } catch (error) {
-      addToast('Failed to update profile', 'error');
+      addToast(error.message || 'Failed to update profile', 'error');
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handlePasswordChange = async () => {
+  // Step 1: Request password change (send 2FA code)
+  const handleRequestPasswordChange = async () => {
+    if (!passwordForm.currentPassword) {
+      addToast('Please enter your current password', 'error');
+      return;
+    }
+    
+    setIsCodeSending(true);
+    try {
+      const response = await settingsAPI.requestPasswordChange(passwordForm.currentPassword);
+      if (response.success) {
+        setMaskedEmail(response.data.email);
+        setPasswordStep(2);
+        addToast('Verification code sent to your email', 'success');
+      } else {
+        addToast(response.message || 'Failed to send verification code', 'error');
+      }
+    } catch (error) {
+      addToast(error.message || 'Failed to send verification code', 'error');
+    } finally {
+      setIsCodeSending(false);
+    }
+  };
+
+  // Step 2: Verify code and change password
+  const handleVerifyAndChangePassword = async () => {
+    if (!passwordForm.verificationCode) {
+      addToast('Please enter the verification code', 'error');
+      return;
+    }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      addToast('Passwords do not match', 'error');
+      addToast('New passwords do not match', 'error');
       return;
     }
     if (passwordForm.newPassword.length < 8) {
       addToast('Password must be at least 8 characters', 'error');
       return;
     }
+    
     setIsSaving(true);
     try {
-      // API call to change password would go here
-      addToast('Password changed successfully!', 'success');
-      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      const response = await settingsAPI.verifyAndChangePassword(
+        passwordForm.verificationCode,
+        passwordForm.newPassword
+      );
+      if (response.success) {
+        addToast('Password changed successfully! Please log in again.', 'success');
+        // Reset form and step
+        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '', verificationCode: '' });
+        setPasswordStep(1);
+        // Optionally log out user
+        setTimeout(() => {
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+        }, 3000);
+      } else {
+        addToast(response.message || 'Failed to change password', 'error');
+      }
     } catch (error) {
-      addToast('Failed to change password', 'error');
+      addToast(error.message || 'Failed to change password', 'error');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  // Resend 2FA code
+  const handleResendCode = async () => {
+    setIsCodeSending(true);
+    try {
+      const response = await settingsAPI.resend2FACode();
+      if (response.success) {
+        addToast('New verification code sent!', 'success');
+      } else {
+        addToast(response.message || 'Failed to resend code', 'error');
+      }
+    } catch (error) {
+      addToast(error.message || 'Failed to resend code', 'error');
+    } finally {
+      setIsCodeSending(false);
     }
   };
 
@@ -417,53 +488,118 @@ export const Settings = () => {
                   <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
                     <Lock className="w-5 h-5" />
                     Change Password
+                    <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">2-Step Verification</span>
                   </h2>
+                  <p className="text-sm text-slate-500 mt-1">
+                    For security, we require email verification when changing your password
+                  </p>
                 </div>
                 <div className="p-6 space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Current Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.currentPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.newPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    />
-                    <p className="text-xs text-slate-500 mt-1">Must be at least 8 characters</p>
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                      Confirm New Password
-                    </label>
-                    <input
-                      type="password"
-                      value={passwordForm.confirmPassword}
-                      onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
-                      className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
-                    />
-                  </div>
-                  <div className="pt-4">
-                    <button
-                      onClick={handlePasswordChange}
-                      disabled={isSaving || !passwordForm.currentPassword || !passwordForm.newPassword}
-                      className="flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
-                    >
-                      {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Lock className="w-4 h-4" />}
-                      Update Password
-                    </button>
-                  </div>
+                  {passwordStep === 1 ? (
+                    // Step 1: Enter current password
+                    <>
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          Current Password
+                        </label>
+                        <input
+                          type="password"
+                          value={passwordForm.currentPassword}
+                          onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                          placeholder="Enter your current password"
+                        />
+                      </div>
+                      <div className="pt-4">
+                        <button
+                          onClick={handleRequestPasswordChange}
+                          disabled={isCodeSending || !passwordForm.currentPassword}
+                          className="flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          {isCodeSending ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Mail className="w-4 h-4" />}
+                          Send Verification Code
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    // Step 2: Enter verification code and new password
+                    <>
+                      <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg">
+                        <p className="text-sm text-blue-700 dark:text-blue-300">
+                          A verification code has been sent to <strong>{maskedEmail}</strong>
+                        </p>
+                        <button
+                          onClick={handleResendCode}
+                          disabled={isCodeSending}
+                          className="text-sm text-blue-600 hover:text-blue-800 mt-2 underline"
+                        >
+                          {isCodeSending ? 'Sending...' : 'Resend code'}
+                        </button>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          Verification Code
+                        </label>
+                        <input
+                          type="text"
+                          value={passwordForm.verificationCode}
+                          onChange={(e) => setPasswordForm({...passwordForm, verificationCode: e.target.value})}
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100 text-center tracking-widest font-mono text-lg"
+                          placeholder="000000"
+                          maxLength={6}
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Enter the 6-digit code from your email</p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          New Password
+                        </label>
+                        <input
+                          type="password"
+                          value={passwordForm.newPassword}
+                          onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                          placeholder="At least 8 characters"
+                        />
+                        <p className="text-xs text-slate-500 mt-1">Must be at least 8 characters</p>
+                      </div>
+                      
+                      <div>
+                        <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                          Confirm New Password
+                        </label>
+                        <input
+                          type="password"
+                          value={passwordForm.confirmPassword}
+                          onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                          className="w-full px-4 py-2 border border-slate-300 dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-slate-100"
+                          placeholder="Re-enter new password"
+                        />
+                      </div>
+                      
+                      <div className="pt-4 flex gap-3">
+                        <button
+                          onClick={handleVerifyAndChangePassword}
+                          disabled={isSaving || !passwordForm.verificationCode || !passwordForm.newPassword}
+                          className="flex items-center gap-2 px-6 py-2 bg-slate-900 dark:bg-slate-700 text-white rounded-lg hover:bg-slate-800 disabled:opacity-50"
+                        >
+                          {isSaving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                          Change Password
+                        </button>
+                        <button
+                          onClick={() => {
+                            setPasswordStep(1);
+                            setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '', verificationCode: '' });
+                          }}
+                          className="px-4 py-2 text-slate-600 hover:text-slate-800"
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

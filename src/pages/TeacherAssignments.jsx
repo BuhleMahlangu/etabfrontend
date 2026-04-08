@@ -36,6 +36,7 @@ export function TeacherAssignments() {
     instructions: '',
     maxMarks: 100,
     passingMarks: 50,
+    availableFrom: '',
     dueDate: '',
     allowLateSubmission: false,
     latePenaltyPercent: 0,
@@ -172,6 +173,49 @@ export function TeacherAssignments() {
     }
   };
 
+  const handleDownloadSubmission = async (submission) => {
+    try {
+      const token = localStorage.getItem('token');
+      const downloadUrl = assignmentAPI.downloadSubmission(submission.id);
+      
+      // Fetch the file through the proxy endpoint
+      const response = await fetch(downloadUrl, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error(`Download failed: ${response.status}`);
+      }
+
+      // Get filename from Content-Disposition header
+      const contentDisposition = response.headers.get('content-disposition');
+      let filename = submission.original_filename || submission.file_name || 'download';
+      
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="?([^"]+)"?/);
+        if (match) filename = match[1];
+      }
+
+      // Create blob and trigger download
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+      console.error('Download error:', error);
+      alert('Failed to download: ' + error.message);
+    }
+  };
+
   const resetForm = () => {
     setFormData({
       subjectId: '',
@@ -180,6 +224,7 @@ export function TeacherAssignments() {
       instructions: '',
       maxMarks: 100,
       passingMarks: 50,
+      availableFrom: '',
       dueDate: '',
       allowLateSubmission: false,
       latePenaltyPercent: 0,
@@ -355,7 +400,43 @@ export function TeacherAssignments() {
             />
           </div>
 
-          <div className="grid grid-cols-3 gap-4">
+          {/* Availability Dates */}
+          <div className="grid grid-cols-2 gap-4 p-4 bg-blue-50 rounded-lg border border-blue-100">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Open Date & Time
+                </span>
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.availableFrom}
+                onChange={(e) => setFormData({ ...formData, availableFrom: e.target.value })}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+              <p className="text-xs text-slate-500 mt-1">When students can see the assignment</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-1">
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  Due Date & Time <span className="text-red-500">*</span>
+                </span>
+              </label>
+              <input
+                type="datetime-local"
+                value={formData.dueDate}
+                onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
+                min={formData.availableFrom}
+                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+              <p className="text-xs text-slate-500 mt-1">Deadline for submission</p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
             <Input
               label="Max Marks"
               type="number"
@@ -369,13 +450,6 @@ export function TeacherAssignments() {
               min={1}
               value={formData.passingMarks}
               onChange={(e) => setFormData({ ...formData, passingMarks: parseInt(e.target.value) })}
-            />
-            <Input
-              label="Due Date"
-              type="datetime-local"
-              value={formData.dueDate}
-              onChange={(e) => setFormData({ ...formData, dueDate: e.target.value })}
-              required
             />
           </div>
 
@@ -508,17 +582,15 @@ export function TeacherAssignments() {
                     {submission.file_name && (
                       <div className="flex items-center gap-2 p-2 bg-slate-50 rounded mb-2">
                         <File className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm">{submission.file_name}</span>
+                        <span className="text-sm">{submission.original_filename || submission.file_name}</span>
                         {submission.file_url && (
-                          <a 
-                            href={submission.file_url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
+                          <button
+                            onClick={() => handleDownloadSubmission(submission)}
                             className="text-blue-600 hover:underline text-sm flex items-center gap-1"
                           >
                             <Download className="w-3 h-3" />
                             Download
-                          </a>
+                          </button>
                         )}
                       </div>
                     )}

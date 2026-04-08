@@ -351,6 +351,37 @@ body {
 }
 
 /* ============================================
+   MOBILE SAFE AREA SUPPORT (for notched devices)
+   ============================================ */
+@supports (padding: max(0px)) {
+  .safe-area-pb {
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  }
+  
+  .safe-area-pt {
+    padding-top: max(0.5rem, env(safe-area-inset-top));
+  }
+}
+
+/* ============================================
+   MOBILE TOUCH OPTIMIZATIONS
+   ============================================ */
+@media (hover: none) and (pointer: coarse) {
+  /* Larger touch targets on mobile */
+  button,
+  a {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  /* Remove hover effects on touch devices */
+  .hover-lift:hover {
+    transform: none;
+    box-shadow: none;
+  }
+}
+
+/* ============================================
    PRINT STYLES
    ============================================ */
 @media print {

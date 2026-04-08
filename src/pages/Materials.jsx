@@ -8,6 +8,8 @@ import { DataTable } from '../components/common/DataTable';
 import { Modal } from '../components/common/Modal';
 import { useToast } from '../components/common/Toast';
 import { useAuth } from '../context/AuthContext';
+import { downloadAPI } from '../services/api';
+import { Loader2, Download } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
 
@@ -28,6 +30,7 @@ export const Materials = () => {
   const [selectedSubjectId, setSelectedSubjectId] = useState('');
   const [selectedGradeId, setSelectedGradeId] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
   const fileInputRef = useRef(null);
   
   const token = localStorage.getItem('token');
@@ -157,9 +160,57 @@ export const Materials = () => {
     }
   };
 
-  const handleDownload = (material) => {
-    addToast(`Downloading ${material.title}...`, 'info');
-    if (material.file_url) window.open(material.file_url, '_blank');
+  const handleDownload = async (material) => {
+    try {
+      setDownloadingId(material.id);
+      addToast(`Downloading ${material.title}...`, 'info');
+      
+      // Get token
+      const token = localStorage.getItem('token')?.replace(/^["']|["']$/g, '');
+      
+      // Fetch the file through the proxy with authentication
+      const downloadUrl = downloadAPI.material(material.id);
+      const response = await fetch(downloadUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || 'Download failed');
+      }
+      
+      // Get filename from Content-Disposition header or use material title
+      const disposition = response.headers.get('content-disposition');
+      let filename = material.original_filename || material.title;
+      if (disposition) {
+        const filenameMatch = disposition.match(/filename="?([^"]+)"?/);
+        if (filenameMatch) {
+          filename = filenameMatch[1];
+        }
+      }
+      
+      // Convert response to blob
+      const blob = await response.blob();
+      
+      // Create download link
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+      
+      addToast(`Downloaded: ${filename}`, 'success');
+    } catch (error) {
+      console.error('Download error:', error);
+      addToast(error.message || 'Download failed. Please try again.', 'error');
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   const openUploadModal = () => {
@@ -203,7 +254,16 @@ export const Materials = () => {
       title: '',
       render: (_, row) => (
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="sm" onClick={() => handleDownload(row)}>Download</Button>
+          <Button variant="ghost" size="sm" onClick={() => handleDownload(row)} disabled={downloadingId === row.id}>
+            {downloadingId === row.id ? (
+              <>
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                Downloading...
+              </>
+            ) : (
+              'Download'
+            )}
+          </Button>
           {hasRole(['teacher', 'admin']) && (
             <Button variant="ghost" size="sm" onClick={() => setSelectedMaterial(row)}>Edit</Button>
           )}
