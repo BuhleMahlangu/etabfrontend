@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, AlertCircle, Building2, Search } from 'lucide-react';
 import { schoolAPI } from '../services/api';
+import { API_URL } from '../config/api';
 
 export const SchoolCodeInput = ({ onSchoolFound, onError }) => {
   const [code, setCode] = useState('');
@@ -19,7 +20,7 @@ export const SchoolCodeInput = ({ onSchoolFound, onError }) => {
 
     try {
       // Check if school exists via public endpoint
-      const response = await fetch(`http://localhost:5000/api/schools/verify/${schoolCode.toUpperCase()}`);
+      const response = await fetch(`${API_URL}/schools/verify/${schoolCode.toUpperCase()}`);
       const data = await response.json();
 
       if (data.success) {

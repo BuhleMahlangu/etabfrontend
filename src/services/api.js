@@ -1,7 +1,7 @@
 import axios from 'axios';
+import { API_URL } from '../config/api';
 
-// Production API URL (hardcoded for Netlify deployment)
-const API_URL = 'https://etabbackend-production.up.railway.app/api';
+// API URL is now imported from central config
 
 const api = axios.create({
   baseURL: API_URL,
