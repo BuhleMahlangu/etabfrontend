@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { SchoolCodeInput } from '../components/SchoolCodeInput';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_URL } from '../config/api';
 
 // Animated floating shapes component
 function FloatingShapes() {
@@ -534,7 +534,7 @@ export function Register() {
                   <div className="relative">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">First Name</label>
                     <div className="relative">
-                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <UserCircle className="hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="text"
                         placeholder="John"
@@ -542,14 +542,14 @@ export function Register() {
                         onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
                         onFocus={() => setFocusedField('firstName')}
                         onBlur={() => setFocusedField(null)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       />
                     </div>
                   </div>
                   <div className="relative">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Last Name</label>
                     <div className="relative">
-                      <UserCircle className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <UserCircle className="hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="text"
                         placeholder="Doe"
@@ -557,7 +557,7 @@ export function Register() {
                         onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
                         onFocus={() => setFocusedField('lastName')}
                         onBlur={() => setFocusedField(null)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       />
                     </div>
                   </div>
@@ -566,7 +566,7 @@ export function Register() {
                 <div className="relative">
                   <label className="block text-sm font-medium text-slate-700 mb-1.5">Email</label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                    <Mail className="hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                     <input
                       type="email"
                       placeholder="you@school.edu"
@@ -574,7 +574,7 @@ export function Register() {
                       onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                       onFocus={() => setFocusedField('email')}
                       onBlur={() => setFocusedField(null)}
-                      className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                      className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                     />
                   </div>
                 </div>
@@ -583,7 +583,7 @@ export function Register() {
                   <div className="relative">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Password</label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Lock className="hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="password"
                         placeholder="••••••••"
@@ -591,14 +591,14 @@ export function Register() {
                         onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         onFocus={() => setFocusedField('password')}
                         onBlur={() => setFocusedField(null)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       />
                     </div>
                   </div>
                   <div className="relative">
                     <label className="block text-sm font-medium text-slate-700 mb-1.5">Confirm</label>
                     <div className="relative">
-                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                      <Lock className="hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                       <input
                         type="password"
                         placeholder="••••••••"
@@ -606,7 +606,7 @@ export function Register() {
                         onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                         onFocus={() => setFocusedField('confirmPassword')}
                         onBlur={() => setFocusedField(null)}
-                        className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
+                        className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 outline-none transition-all"
                       />
                     </div>
                   </div>
