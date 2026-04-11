@@ -28,7 +28,7 @@ import {
   BarChart3
 } from 'lucide-react';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+import { API_URL } from '../config/api';
 
 export const TeacherDashboard = () => {
   const navigate = useNavigate();
@@ -171,8 +171,13 @@ export const TeacherDashboard = () => {
     return acc;
   }, {});
 
-  // Loading state
-  if (subjectLoading || loading) {
+  // Loading state - only show if we have a subject selected
+  if (subjectLoading || (loading && currentSubject)) {
+    return <LoadingSpinner fullScreen />;
+  }
+  
+  // Show loading spinner briefly while checking subjects
+  if (subjectLoading) {
     return <LoadingSpinner fullScreen />;
   }
 
