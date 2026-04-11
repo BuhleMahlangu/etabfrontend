@@ -120,9 +120,9 @@ export const ContactAdmin = () => {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6 max-w-5xl mx-auto contact-admin-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-8 gap-4 contact-header">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate(-1)}
@@ -145,7 +145,7 @@ export const ContactAdmin = () => {
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6 stats-grid">
         <div className="bg-white dark:bg-slate-800 rounded-xl p-4 shadow-sm">
           <p className="text-sm text-slate-500">Open Requests</p>
           <p className="text-2xl font-bold text-yellow-600">
@@ -230,8 +230,8 @@ export const ContactAdmin = () => {
 
       {/* New Message Modal */}
       {showForm && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-lg w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-4 modal-overlay">
+          <div className="bg-white dark:bg-slate-800 rounded-t-xl md:rounded-xl w-full md:max-w-lg md:w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl modal-content">
             <div className="flex items-center justify-between mb-6">
               <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">
                 Contact Admin
@@ -290,7 +290,7 @@ export const ContactAdmin = () => {
                 </div>
               </div>
               
-              <div className="flex gap-3 mt-6">
+              <div className="flex flex-col md:flex-row gap-3 mt-6 form-actions">
                 <button
                   type="button"
                   onClick={() => setShowForm(false)}
@@ -324,8 +324,8 @@ export const ContactAdmin = () => {
 
       {/* Message Detail Modal */}
       {selectedMessage && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-y-auto p-6 shadow-2xl">
+        <div className="fixed inset-0 bg-black/50 flex items-end md:items-center justify-center z-50 p-0 md:p-4 modal-overlay">
+          <div className="bg-white dark:bg-slate-800 rounded-t-xl md:rounded-xl w-full md:max-w-2xl md:w-full max-h-[90vh] overflow-y-auto p-6 shadow-2xl modal-content">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
                 <h3 className="text-xl font-bold text-slate-900 dark:text-slate-100">

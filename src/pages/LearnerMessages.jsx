@@ -127,9 +127,9 @@ export const LearnerMessages = () => {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto h-[calc(100vh-6rem)]">
+    <div className="p-4 md:p-6 max-w-7xl mx-auto h-[calc(100vh-4rem)] md:h-[calc(100vh-6rem)] messages-container">
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between mb-4 md:mb-6 gap-2 md:gap-0 messages-header">
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate(-1)}
@@ -151,10 +151,10 @@ export const LearnerMessages = () => {
         </button>
       </div>
 
-      {/* Main Content - 3 Column Layout */}
-      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden flex h-[calc(100%-5rem)]">
+      {/* Main Content - Responsive Layout */}
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm overflow-hidden flex flex-col md:flex-row h-[calc(100%-4rem)] md:h-[calc(100%-5rem)] messages-layout">
         {/* Subjects List */}
-        <div className="w-72 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+        <div className="w-full md:w-72 border-b md:border-b-0 md:border-r border-slate-200 dark:border-slate-700 flex flex-col subjects-sidebar max-h-[35vh] md:max-h-none">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <h2 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <BookOpen className="w-4 h-4" />
@@ -204,8 +204,8 @@ export const LearnerMessages = () => {
           </div>
         </div>
 
-        {/* Teacher Info */}
-        <div className="w-64 border-r border-slate-200 dark:border-slate-700 flex flex-col">
+        {/* Teacher Info - Hidden on mobile */}
+        <div className="hidden md:flex w-64 border-r border-slate-200 dark:border-slate-700 flex-col teacher-sidebar">
           <div className="p-4 border-b border-slate-200 dark:border-slate-700">
             <h2 className="font-semibold text-slate-900 dark:text-slate-100 flex items-center gap-2">
               <GraduationCap className="w-4 h-4" />
@@ -247,7 +247,7 @@ export const LearnerMessages = () => {
         </div>
 
         {/* Messages Area */}
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col chat-area min-h-[40vh] md:min-h-0">
           {selectedSubject && teacher ? (
             <>
               {/* Header */}
@@ -284,7 +284,7 @@ export const LearnerMessages = () => {
                         className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                       >
                         <div
-                          className={`max-w-[70%] rounded-2xl px-4 py-2 ${
+                          className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-2 message-bubble ${
                             isMe
                               ? 'bg-blue-600 text-white rounded-br-none'
                               : 'bg-slate-100 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-bl-none'
@@ -303,7 +303,7 @@ export const LearnerMessages = () => {
               </div>
 
               {/* Input */}
-              <form onSubmit={handleSendMessage} className="p-4 border-t border-slate-200 dark:border-slate-700">
+              <form onSubmit={handleSendMessage} className="p-3 md:p-4 border-t border-slate-200 dark:border-slate-700 chat-input-container">
                 <div className="flex gap-2">
                   <input
                     type="text"

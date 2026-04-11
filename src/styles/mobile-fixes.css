@@ -1,0 +1,189 @@
+/* Mobile Responsive Fixes */
+
+/* Contact Admin Mobile Fixes */
+@media (max-width: 768px) {
+  /* Reduce padding on mobile */
+  .contact-admin-container {
+    padding: 1rem !important;
+  }
+
+  /* Stack stats grid to single column */
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+  }
+
+  /* Make header more compact */
+  .contact-header {
+    flex-direction: column !important;
+    gap: 1rem !important;
+    align-items: flex-start !important;
+  }
+
+  /* Modal takes full width on mobile */
+  .modal-content {
+    max-width: 100% !important;
+    margin: 0.5rem !important;
+    max-height: 95vh !important;
+  }
+
+  /* Form buttons stack */
+  .form-actions {
+    flex-direction: column !important;
+  }
+
+  /* Full width buttons */
+  .form-actions button {
+    width: 100% !important;
+  }
+}
+
+/* Messages (Learner/Teacher) Mobile Fixes */
+@media (max-width: 768px) {
+  /* Messages container */
+  .messages-container {
+    padding: 0.75rem !important;
+    height: auto !important;
+    min-height: calc(100vh - 4rem) !important;
+  }
+
+  /* Stack the 3-column layout */
+  .messages-layout {
+    flex-direction: column !important;
+    height: auto !important;
+  }
+
+  /* Subjects list - full width on mobile */
+  .subjects-sidebar {
+    width: 100% !important;
+    border-right: none !important;
+    border-bottom: 1px solid #e2e8f0 !important;
+    max-height: 40vh !important;
+  }
+
+  /* Chat area - full width */
+  .chat-area {
+    width: 100% !important;
+    height: 50vh !important;
+  }
+
+  /* Hide teacher info sidebar on mobile, show in modal */
+  .teacher-sidebar {
+    display: none !important;
+  }
+
+  /* Make header compact */
+  .messages-header {
+    flex-direction: column !important;
+    gap: 0.75rem !important;
+    align-items: flex-start !important;
+  }
+
+  .messages-header h1 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Back button always visible on mobile */
+  .mobile-back-button {
+    display: flex !important;
+  }
+
+  /* Subject list items more compact */
+  .subject-item {
+    padding: 0.75rem !important;
+  }
+
+  .subject-icon {
+    width: 2rem !important;
+    height: 2rem !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Message bubbles full width */
+  .message-bubble {
+    max-width: 85% !important;
+  }
+
+  /* Chat input fixed at bottom */
+  .chat-input-container {
+    position: sticky !important;
+    bottom: 0 !important;
+    background: white !important;
+    padding: 0.75rem !important;
+    border-top: 1px solid #e2e8f0 !important;
+  }
+}
+
+/* General Mobile Improvements */
+@media (max-width: 768px) {
+  /* Reduce heading sizes */
+  h1 {
+    font-size: 1.5rem !important;
+  }
+
+  h2 {
+    font-size: 1.25rem !important;
+  }
+
+  /* Make buttons easier to tap */
+  button {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+
+  /* Form inputs larger for touch */
+  input,
+  textarea,
+  select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    padding: 0.75rem !important;
+  }
+
+  /* Cards full width */
+  .card {
+    margin-left: -0.75rem !important;
+    margin-right: -0.75rem !important;
+    border-radius: 0 !important;
+  }
+
+  /* Tables horizontal scroll */
+  .table-container {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+  }
+
+  /* Modal positioning for mobile */
+  .modal-overlay {
+    align-items: flex-end !important;
+    padding: 0 !important;
+  }
+
+  .modal-content {
+    border-radius: 1rem 1rem 0 0 !important;
+    max-height: 90vh !important;
+    width: 100% !important;
+  }
+}
+
+/* Small phones */
+@media (max-width: 480px) {
+  .contact-admin-container,
+  .messages-container {
+    padding: 0.5rem !important;
+  }
+
+  .stats-grid {
+    gap: 0.5rem !important;
+  }
+
+  .message-bubble {
+    max-width: 90% !important;
+    font-size: 0.875rem !important;
+  }
+}
+
+/* Ensure desktop styles are not affected */
+@media (min-width: 769px) {
+  .mobile-back-button {
+    display: none !important;
+  }
+}
