@@ -1,3 +1,13 @@
+[build]
+  publish = "dist"
+  command = "npm run build"
+
+[build.environment]
+  VITE_API_URL = "https://etabbackend-production.up.railway.app/api"
+  VITE_CLOUDINARY_CLOUD_NAME = "diaqpzqox"
+  VITE_APP_NAME = "E-tab Education"
+  VITE_APP_URL = "https://etab.co.za"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
