@@ -335,13 +335,13 @@ export const SchoolRegister = () => {
                       School Address
                     </label>
                     <div className="relative">
-                      <MapPin className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <MapPin className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <textarea
                         name="address"
                         value={formData.address}
                         onChange={handleChange}
                         rows={2}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Full school address"
                       />
                     </div>
@@ -352,13 +352,13 @@ export const SchoolRegister = () => {
                       School Phone
                     </label>
                     <div className="relative">
-                      <Phone className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <Phone className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <input
                         type="tel"
                         name="phone"
                         value={formData.phone}
                         onChange={handleChange}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="011 123 4567"
                       />
                     </div>
@@ -369,13 +369,13 @@ export const SchoolRegister = () => {
                       School Email
                     </label>
                     <div className="relative">
-                      <Mail className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <Mail className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <input
                         type="email"
                         name="email"
                         value={formData.email}
                         onChange={handleChange}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="school@example.com"
                       />
                     </div>
@@ -445,13 +445,13 @@ export const SchoolRegister = () => {
                       Admin Email *
                     </label>
                     <div className="relative">
-                      <Mail className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <Mail className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <input
                         type="email"
                         name="adminEmail"
                         value={formData.adminEmail}
                         onChange={handleChange}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="principal@school.com"
                         required
                       />
@@ -466,13 +466,13 @@ export const SchoolRegister = () => {
                       Password *
                     </label>
                     <div className="relative">
-                      <Lock className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <Lock className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <input
                         type="password"
                         name="adminPassword"
                         value={formData.adminPassword}
                         onChange={handleChange}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="••••••••"
                         minLength={6}
                         required
@@ -485,13 +485,13 @@ export const SchoolRegister = () => {
                       Confirm Password *
                     </label>
                     <div className="relative">
-                      <Lock className="hidden md:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
+                      <Lock className="hidden sm:block absolute left-3 top-3 w-5 h-5 text-slate-400" />
                       <input
                         type="password"
                         name="confirmPassword"
                         value={formData.confirmPassword}
                         onChange={handleChange}
-                        className="w-full px-4 md:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        className="w-full px-4 sm:pl-10 pr-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="••••••••"
                         required
                       />

@@ -1,6 +1,6 @@
-﻿import React from 'react';
+import React from 'react';
+import { Link } from 'react-router-dom';
 
-// ✅ Named export (not default)
 export const Button = ({ 
   children, 
   leftIcon,
@@ -10,6 +10,9 @@ export const Button = ({
   isLoading = false,
   disabled = false,
   className = '',
+  as: Component = 'button',
+  to,
+  href,
   ...props
 }) => {
   const variants = {
@@ -26,16 +29,75 @@ export const Button = ({
     lg: 'px-6 py-3 text-lg'
   };
 
+  const baseClasses = `
+    inline-flex items-center justify-center gap-2
+    rounded-lg font-medium transition-colors
+    disabled:opacity-50 disabled:cursor-not-allowed
+    ${variants[variant]}
+    ${sizes[size]}
+    ${className}
+  `;
+
+  // Handle React Router Link
+  if (to) {
+    return (
+      <Link
+        to={to}
+        className={baseClasses}
+        {...props}
+      >
+        {leftIcon && (
+          <span className="flex items-center">{leftIcon}</span>
+        )}
+        {children}
+        {rightIcon && (
+          <span className="flex items-center">{rightIcon}</span>
+        )}
+      </Link>
+    );
+  }
+
+  // Handle external anchor link
+  if (href) {
+    return (
+      <a
+        href={href}
+        className={baseClasses}
+        {...props}
+      >
+        {leftIcon && (
+          <span className="flex items-center">{leftIcon}</span>
+        )}
+        {children}
+        {rightIcon && (
+          <span className="flex items-center">{rightIcon}</span>
+        )}
+      </a>
+    );
+  }
+
+  // Handle custom component (like React Router Link passed via 'as' prop)
+  if (Component !== 'button') {
+    return (
+      <Component
+        className={baseClasses}
+        {...props}
+      >
+        {leftIcon && (
+          <span className="flex items-center">{leftIcon}</span>
+        )}
+        {children}
+        {rightIcon && (
+          <span className="flex items-center">{rightIcon}</span>
+        )}
+      </Component>
+    );
+  }
+
+  // Default button
   return (
     <button
-      className={`
-        inline-flex items-center justify-center gap-2
-        rounded-lg font-medium transition-colors
-        disabled:opacity-50 disabled:cursor-not-allowed
-        ${variants[variant]}
-        ${sizes[size]}
-        ${className}
-      `}
+      className={baseClasses}
       disabled={disabled || isLoading}
       {...props}
     >
@@ -59,5 +121,5 @@ export const Button = ({
   );
 };
 
-// ✅ Also keep default export for compatibility
+// Also keep default export for compatibility
 export default Button;

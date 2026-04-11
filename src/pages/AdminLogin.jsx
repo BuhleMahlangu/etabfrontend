@@ -244,7 +244,7 @@ export function AdminLogin() {
                   Email Address
                 </label>
                 <div className="relative">
-                  <Mail className={`hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${focusedField === 'email' ? 'text-purple-500' : 'text-slate-400'}`} />
+                  <Mail className={`hidden sm:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${focusedField === 'email' ? 'text-purple-500' : 'text-slate-400'}`} />
                   <input
                     type="email"
                     placeholder="admin@school.com"
@@ -254,7 +254,7 @@ export function AdminLogin() {
                     onBlur={() => setFocusedField(null)}
                     required
                     disabled={isLoading}
-                    className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50"
+                    className="w-full px-4 sm:pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50"
                   />
                 </div>
               </div>
@@ -265,7 +265,7 @@ export function AdminLogin() {
                   Password
                 </label>
                 <div className="relative">
-                  <Lock className={`hidden md:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${focusedField === 'password' ? 'text-purple-500' : 'text-slate-400'}`} />
+                  <Lock className={`hidden sm:block absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 transition-colors ${focusedField === 'password' ? 'text-purple-500' : 'text-slate-400'}`} />
                   <input
                     type="password"
                     placeholder="••••••••"
@@ -275,7 +275,7 @@ export function AdminLogin() {
                     onBlur={() => setFocusedField(null)}
                     required
                     disabled={isLoading}
-                    className="w-full px-4 md:pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50"
+                    className="w-full px-4 sm:pl-10 pr-4 py-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 transition-all disabled:opacity-50"
                   />
                 </div>
               </div>

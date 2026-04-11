@@ -95,10 +95,10 @@ export function Navbar() {
               </div>
             ) : (
               <div className="flex items-center gap-2">
-                <Button as={Link} to="/login" variant="ghost" size="sm">
+                <Button to="/login" variant="ghost" size="sm">
                   Sign In
                 </Button>
-                <Button as={Link} to="/register" size="sm">
+                <Button to="/register" size="sm">
                   Sign Up
                 </Button>
               </div>
