@@ -1,0 +1,15 @@
+{
+	"folders": [
+		{
+			"path": "../VirtualPortfolio"
+		}
+	],
+	"settings": {
+		"liveServer.settings.multiRootWorkspaceName": "etabfrontend"
+	},
+	"extensions": {
+		"recommendations": [
+			"kingleo.kimi-vscode"
+		]
+	}
+}
